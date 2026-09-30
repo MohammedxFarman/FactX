@@ -1,0 +1,11 @@
+import { createApp } from './app.js';
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
+import { startExecutionWorker } from './execution.js';
+import { startWorkflowReminders } from './coordination.js';
+if (existsSync('.env')) loadEnvFile('.env');
+const { app, db, setupToken, sendReminders }=createApp();
+startExecutionWorker(db);
+startWorkflowReminders(sendReminders);
+const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT)||3001;
+app.listen(port,host,()=>{console.log(`\nFactX server: http://${host}:${port}`);if(!db.prepare('SELECT id FROM users LIMIT 1').get())console.log(`First-run setup token: ${setupToken}\nCreate your administrator account in the browser. Keep this token private.\n`);});

@@ -1,0 +1,11 @@
+import{readFileSync,writeFileSync}from'node:fs';
+let ui=readFileSync('src/main.jsx','utf8');const replace=(a,b)=>{if(!ui.includes(a))throw new Error('Missing anchor '+a.slice(0,100));ui=ui.replace(a,b)};
+replace("import './styles.css';","import './styles.css';\nimport { Attachments } from './Attachments.jsx';");
+replace("{error&&<div className=\"error\">{error}</div>}{a.kind==='module'?", "{error&&<div className=\"error\">{error}</div>}<Attachments kind=\"activity\" targetId={a.id} canUpload={!student} api={api}/>{a.kind==='module'?");
+replace("<pre>{evaluation.content}</pre>{student?", "<pre>{evaluation.content}</pre><Attachments kind=\"submission\" targetId={evaluation.id} canUpload={student&&a.kind==='assignment'&&evaluation.status!=='evaluated'} api={api}/>{student?");
+replace("<p>{modal.leave.reason}</p><Field label=\"Decision\">", "<p>{modal.leave.reason}</p><Attachments kind=\"leave\" targetId={modal.leave.id} api={api}/><Field label=\"Decision\">");
+replace("</Button>:r.reviewer_name||'—'}]} empty={{icon:CalendarDays", "</Button>:<Button variant=\"ghost\" onClick={()=>setModal({type:'leaveFiles',leave:r})}>View details <ChevronRight size={14}/></Button>}]} empty={{icon:CalendarDays");
+replace("profile:'Your account',help:", "leaveFiles:'Leave request details',profile:'Your account',help:");
+replace("  {modal.type==='profile'&&user.role==='STUDENT'", "  {modal.type==='leaveFiles'&&<div className=\"help-content\"><Person name={modal.leave.student_name} sub={`${fmt(modal.leave.start_date)} → ${fmt(modal.leave.end_date)}`}/><p>{modal.leave.reason}</p><Badge tone={modal.leave.status==='approved'?'green':'neutral'}>{label(modal.leave.status)}</Badge><p>{modal.leave.review_note||'No review note yet.'}</p><Attachments kind=\"leave\" targetId={modal.leave.id} canUpload={user.role==='STUDENT'&&modal.leave.status==='pending'} api={api}/></div>}\n  {modal.type==='profile'&&user.role==='STUDENT'");
+writeFileSync('src/main.jsx',ui);
+console.log('Private activity, submission, and leave attachments connected.');

@@ -1,0 +1,14 @@
+import{readFileSync,writeFileSync}from'node:fs';
+let tests=readFileSync('tests/api.test.js','utf8');
+tests=tests.replace("const result=await post(`/activities/${state.quiz.id}/submit`,{answers:[1]},state.s1.cookie)","const result=await post(`/activities/${state.quiz.id}/submit`,{answers:[listed[0].config.questions[0].options.indexOf('Second')]},state.s1.cookie)");
+writeFileSync('tests/api.test.js',tests);
+let app=readFileSync('server/app.js','utf8');
+app=app.replace("app.patch('/api/leave/:id',roles('ADMIN','HOD'),(req,res)=>{", "app.patch('/api/leave/:id',roles('ADMIN','HOD','FACULTY'),(req,res)=>{if(req.user.role==='FACULTY'&&db.prepare('SELECT value FROM institution_settings WHERE key=?').get('facultyLeaveApproval')?.value!=='true')fail(403,'Your institution has not enabled faculty leave approval.');");
+app=app.replace("const notify = (uid, title, body = '') => db.prepare('INSERT INTO notifications VALUES(?,?,?,?,NULL,?)').run(id(),uid,title,body,now());", "const notify = (uid, title, body = '') => {if(db.prepare('SELECT value FROM institution_settings WHERE key=?').get('notificationsEnabled')?.value==='false')return;db.prepare('INSERT INTO notifications VALUES(?,?,?,?,NULL,?)').run(id(),uid,title,body,now());};");
+app=app.replace("audit(req.user,'assistant.queried','assistant',null);res.json({answer,sources,mode:'record_lookup'});", "db.prepare('INSERT INTO ai_conversations VALUES(?,?,?,?,?,?,?)').run(id(),req.user.id,message,answer,JSON.stringify(sources),'record_lookup',now());audit(req.user,'assistant.queried','assistant',null);res.json({answer,sources,mode:'record_lookup'});");
+writeFileSync('server/app.js',app);
+let ui=readFileSync('src/Extensions.jsx','utf8');
+ui=ui.replace("allowStudentBioEdit:v.allowStudentBioEdit==='on'", "allowStudentBioEdit:v.allowStudentBioEdit==='on',facultyLeaveApproval:v.facultyLeaveApproval==='on',notificationsEnabled:v.notificationsEnabled==='on'");
+ui=ui.replace('Allow students to edit their bio</label></div>', 'Allow students to edit their bio</label><label><input name="facultyLeaveApproval" type="checkbox" defaultChecked={prefs.facultyLeaveApproval}/>Allow assigned faculty to approve leave</label><label><input name="notificationsEnabled" type="checkbox" defaultChecked={prefs.notificationsEnabled!==false}/>Enable event notifications</label></div>');
+writeFileSync('src/Extensions.jsx',ui);
+console.log('Integration refinements applied.');
