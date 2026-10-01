@@ -55,7 +55,8 @@ Optional: copy `.env.example` to `.env` and configure the values before starting
 - Private activity, assignment-submission, and leave attachments with ownership and review locks.
 - Institution preferences for support thresholds, profile editing, notifications; administrative account-access changes revoke existing sessions.
 - Permission-filtered PDF/text indexing and search, optional Ollama document RAG with embeddings and citations, and private assistant history.
-- Optional versioned ML training, evaluation, prediction, and SHAP explanation pipeline in `ml/`.
+- LangGraph timetable assistant for Faculty/HOD/Admin PDF or image uploads, authorized assignment matching, conflict validation, human review, and confirmed writes.
+- Optional versioned ML training, evaluation, calibration, abstention, prediction, and SHAP explanation pipeline in `ml/` for four independently labeled risk outcomes.
 
 ## Security boundaries
 
@@ -75,13 +76,13 @@ Without a configured sandbox, lab submission returns a clear unavailable error a
 
 Support rules (attendance below 75%, recorded subject marks below 50%, and overdue work) are clearly labeled as guidance, not ML risk predictions. They can operate on real records immediately. A blank workspace shows no invented risks.
 
-See `ml/README.md` for the real-data training contract. Models are versioned, evaluated, and inactive until an explicit named review. To import a reviewed prediction artifact, run:
+See `ml/README.md` for the real-data training contract. Models are versioned, evaluated, calibrated, and inactive until an explicit named review. To import a reviewed prediction artifact, run:
 
 ```powershell
 node server/import-predictions.js data/predictions-for-review.json --activate-reviewed-version YOUR_REVIEWED_VERSION
 ```
 
-This command explicitly activates the named version and retains earlier model records. Do not run it with fabricated predictions or unreviewed data. LSTM/GRU and clustering remain deferred until appropriate longitudinal data and evaluation exist.
+This command explicitly activates the named version and retains earlier model records. Do not run it with fabricated predictions or unreviewed data. The scoped `/api/risk/features` and `/api/risk/monitoring` endpoints expose cutoff snapshots and model coverage to authorized Admin/HOD accounts. LSTM/GRU and clustering remain deferred until appropriate longitudinal data and evaluation exist.
 
 ## Integration setup and remaining dependencies
 
@@ -89,7 +90,7 @@ Run `npm run doctor` to check the production bundle, configured AI models, Judge
 
 See [the integration setup guide](docs/INTEGRATIONS.md) for configuration and acceptance checks.
 
-- Document RAG is implemented, including stored embeddings. It requires your running Ollama service and installed chat/embedding models. Without those settings, the assistant uses academic record lookup and knowledge search uses text matching.
+- Document RAG is implemented, including stored embeddings. It requires your running Ollama service and installed chat/embedding models. Timetable image or scanned-PDF uploads additionally require a vision model. Without those settings, the assistant uses academic record lookup and knowledge search uses text matching.
 - Programming execution requires a separate Judge0 service. Controlled local tests cover the adapter, but a real sandbox deployment and actual language execution still need validation.
 - ML needs an approved real dataset, training/evaluation, and a named institutional review before activation. Python syntax checks are complete; no model has been trained or activated by this verification work.
 - Historical enrollment snapshots, email-based password recovery, automated institution-specific grade conversion, question-bank sampling, and formal proctoring remain future extensions. Current password resets are administrator-managed; grades/points/credits are entered explicitly, and current enrollment determines access. These are separate from the external integrations above.

@@ -1,15 +1,39 @@
 # FactX academic risk pipeline
 
-No model is bundled, no predictions are fabricated, and no synthetic dataset is generated. Academic support rules in the application are separate from this pipeline.
+FactX keeps model estimates separate from transparent support rules. No model is bundled, predictions are never fabricated, and training never activates a model automatically.
 
-Install the optional Python dependencies with `python -m pip install -r ml/requirements.txt`. Supply an institution-validated CSV containing `student_id`, `observed_at`, `outcome` (0 or 1, with an approved academic outcome definition), and the feature columns listed in `data.py`. Values must be computed before the outcome observation window to avoid leakage. Missing measurements remain missing; they must not be replaced by invented zeroes.
+The pipeline supports four independently defined outcomes: `course_failure`, `attendance_shortage`, `assignment_delay`, and `lab_failure`. Features are measured at `observed_at`; the approved outcome is recorded later at `outcome_observed_at`. The loader rejects missing base measurements, future or leaking labels, invalid ranges, and small datasets. Missing optional measurements remain missing and can lead to an `insufficient_evidence` abstention.
 
-`python ml/train.py path/to/validated.csv --version cohort-2026-v1 --dataset-reference approved-cohort-2026`
+Install the optional Python dependencies:
 
-The training command validates the contract, splits students into disjoint training and holdout partitions, trains Random Forest and Logistic Regression candidates, and records metrics, dataset hash, features, and version. Models remain inactive. An institution must review temporal performance, calibration, subgroup quality, consent, and appropriate use. The minimum dataset size is a basic guard, not evidence that a model is accurate.
+```powershell
+python -m pip install -r ml/requirements.txt
+```
 
-After an actual named review, record `validated: true`, `reviewed_by`, and `reviewed_at` in the immutable version's manifest. Then run `python ml/predict.py data/models/cohort-2026-v1 path/to/current-features.csv --output data/predictions-for-review.json`. This generates probabilities and genuine local SHAP contributions. It does not silently change the active model.
+Train candidates for one reviewed outcome and horizon:
 
-LSTM/GRU and clustering are intentionally deferred until an adequate longitudinal dataset and an evaluated use case exist. The current dataset contract does not pretend a tabular snapshot is a time series.
+```powershell
+python ml/train.py path/to/validated.csv --target attendance_shortage --horizon-days 30 --version cohort-2026-v1 --dataset-reference approved-cohort-2026
+```
 
-Never load untrusted joblib/pickle files. Restrict access to model directories and exported student features. Use reviewed models for supportive human intervention, not automatic disciplinary or exclusion decisions.
+Training uses a time-ordered development/future holdout split and grouped cross-validation by student. It compares Random Forest, Logistic Regression, and HistGradientBoosting, calibrates probabilities when possible, chooses a review threshold under an alert-rate guard, reports PR-AUC, ROC-AUC, Brier score, log loss, precision, recall, F1/F2, confusion matrix, and a bootstrap PR-AUC interval, and writes a manifest with feature and dataset hashes. It does not mark the model reviewed or active.
+
+After an actual institutional review, add a named `reviewed_by`, `reviewed_at`, and `validated: true` to the immutable manifest. Confirm the outcome definition, consent, temporal holdout, calibration, subgroup sample sizes, action capacity, and fairness before using it. Then create a current feature snapshot and export predictions:
+
+```powershell
+python ml/predict.py data/models/cohort-2026-v1 path/to/current-features.csv --output data/predictions-for-review.json
+```
+
+Predictions contain calibrated probabilities, low/medium/high bands, coverage, missing features, and up to four SHAP or model-importance factors. If coverage is below the reviewed minimum, the output is `insufficient_evidence` with no probability. It does not silently change the active model.
+
+Import only a reviewed artifact into the application:
+
+```powershell
+node server/import-predictions.js data/predictions-for-review.json --activate-reviewed-version cohort-2026-v1
+```
+
+The importer validates the schema, target-specific subject scope, thresholds, timestamps, freshness, coverage, student and department boundaries, explanation features, and idempotent fingerprints. Use `/api/risk/features` to export a scoped cutoff snapshot and `/api/risk/monitoring` to inspect stored model coverage by cohort. Those snapshots are current record views; they are not reconstructed historical data, so save them before an outcome window starts and join independently observed outcomes afterward.
+
+The assistant can use these reviewed estimates alongside authorized institutional documents through RAG to suggest practical study or faculty follow-up actions. It must describe factors as associations, cite its sources, and keep a faculty member in the review loop. RAG and the timetable upload workflow use LangGraph orchestration; LangChain is only a supporting dependency and is not required for retrieval itself.
+
+Do not load untrusted joblib/pickle files. Restrict access to model directories and exported student features. Use reviewed models for supportive human intervention, never automatic disciplinary or exclusion decisions. LSTM/GRU and clustering remain deferred until an adequate longitudinal dataset and an evaluated use case exist.

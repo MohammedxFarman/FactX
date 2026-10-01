@@ -16,6 +16,8 @@ import { registerDepartmentOverview } from './department.js';
 import { registerWorkflows } from './workflows.js';
 import { registerMonitoring } from './monitoring.js';
 import { registerCoordination } from './coordination.js';
+import { registerRisk } from './risk.js';
+import { registerTimetableAgent } from './timetable-agent.js';
 
 const id = () => randomUUID(), now = () => new Date().toISOString();
 const text = z.string().trim().min(1).max(300), optionalId = z.string().nullable().optional();
@@ -45,6 +47,8 @@ export function createApp({ dataDir = path.resolve(process.env.FACTX_DATA_DIR ||
   const staff=roles('ADMIN','HOD','FACULTY'), instructors=roles('ADMIN','FACULTY'), admin=roles('ADMIN');
   registerDepartmentOverview({app,db,roles});
   registerExtensions({app,db,roles,audit,notify});
+  registerRisk({app,db,roles});
+  registerTimetableAgent({app,db,roles,audit,notify});
   registerWorkflows({app,db,roles,audit,notify});
   registerMonitoring({app,db,roles,audit,notify});
   const sendReminders=registerCoordination({app,db,roles,audit,notify});

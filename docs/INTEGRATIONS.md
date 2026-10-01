@@ -8,16 +8,17 @@ Copy `.env.example` to `.env` if it does not already exist. Keep `.env` and `dat
 
 ## Document AI
 
-Use an institution-managed Ollama-compatible service with both an installed chat model and an installed embedding model. Set these values in `.env` to match that service:
+Use an institution-managed Ollama-compatible service with an installed chat model and embedding model. Add a vision model when faculty will upload image or scanned-PDF timetables. Set these values in `.env` to match that service:
 
 ```dotenv
 OLLAMA_URL=http://127.0.0.1:11434
 OLLAMA_EMBED_MODEL=your-installed-embedding-model
 OLLAMA_CHAT_MODEL=your-installed-chat-model
+OLLAMA_VISION_MODEL=your-installed-vision-model
 # OLLAMA_API_KEY=your-service-secret-if-required
 ```
 
-The model names above are placeholders, not installed models. The app uses `/api/embed` and `/api/chat`; the readiness checker uses `/api/tags` to verify model availability. Embeddings are stored in SQLite alongside document passages. Changing the embedding model requires re-indexing documents.
+The model names above are placeholders, not installed models. The app uses `/api/embed` and `/api/chat`; the readiness checker uses `/api/tags` to verify model availability. Embeddings are stored in SQLite alongside document passages. Changing the embedding model requires re-indexing documents. The normal assistant uses authorized RAG and requires the chat and embedding settings; timetable image/scanned-PDF extraction additionally requires the vision setting.
 
 After `npm run doctor` reports the models available:
 
@@ -27,7 +28,13 @@ After `npm run doctor` reports the models available:
 4. Ask the assistant a question answered in the document and inspect its cited sources.
 5. Sign in with an account outside that document's scope and confirm that the document cannot be found or downloaded.
 
-Scanned PDFs require OCR before indexing. Permission filtering is tested with a controlled service, but live answer quality and model behavior require checking against your institution's documents. Without the AI configuration, record lookup and text search remain usable.
+Scanned PDFs require the timetable vision workflow; the knowledge-library indexer currently accepts selectable-text PDFs and plain text. Permission filtering is tested with a controlled service, but live answer quality and model behavior require checking against your institution's documents. Without the AI configuration, record lookup and text search remain usable.
+
+## Timetable assistant
+
+Faculty, HOD, and Admin can open the assistant and choose **Upload timetable**. The LangGraph workflow extracts sessions from a PDF, PNG, or JPEG, matches names only to the caller's authorized teaching assignments, checks existing and draft conflicts, and saves a private draft. The caller can correct unresolved fields in the review table. Nothing is written to `timetable` until the caller presses **Confirm and add sessions**; retries are idempotent and notifications go to the affected faculty.
+
+The workflow accepts files up to 10 MB and eight PDF pages, bounds decoded image pixels, rejects mismatched file content, ignores document instructions, and never lets model output call tools. A Faculty account can add only its own assigned sessions; HOD is limited to its department. Text PDFs use `OLLAMA_CHAT_MODEL`; images and scanned pages use `OLLAMA_VISION_MODEL`. If either service is unavailable, no timetable records are changed.
 
 ## Programming execution
 

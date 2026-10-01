@@ -15,6 +15,9 @@
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
     "@fontsource-variable/manrope": "^5.3.0",
+    "@langchain/core": "^1.2.14",
+    "@langchain/langgraph": "^1.4.18",
+    "@napi-rs/canvas": "^1.0.9",
     "express": "^5.1.0",
     "lucide-react": "^0.468.0",
     "multer": "^2.0.2",
@@ -22,7 +25,7 @@
     "pdfkit": "^0.17.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "zod": "^3.24.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.0",

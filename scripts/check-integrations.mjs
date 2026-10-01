@@ -37,6 +37,12 @@ else {
   } catch (error) { report('Document AI', 'ERROR', error instanceof TypeError ? 'Cannot reach the service; check URL, network and credentials.' : error.message); }
 }
 
+const timetableKeys = ['OLLAMA_URL', 'OLLAMA_CHAT_MODEL', 'OLLAMA_VISION_MODEL'];
+const missingTimetable = timetableKeys.filter(key => !process.env[key]);
+report('Timetable agent', missingTimetable.length ? 'MISSING' : 'READY', missingTimetable.length
+  ? `Set ${missingTimetable.join(', ')} for PDF/image extraction. The assistant and record lookup can still run without it.`
+  : 'LangGraph extraction configuration is present; upload a test timetable and review the draft before confirming changes.');
+
 if (!process.env.JUDGE_URL) report('Code execution', 'MISSING', 'Set JUDGE_URL for a separately hosted Judge0 service; optionally set JUDGE_TOKEN.');
 else {
   try {

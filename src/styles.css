@@ -114,3 +114,35 @@
 .hod-monitoring-snapshot>div:first-child{flex:1}
 @media(max-width:900px){.hod-monitoring-snapshot{flex-direction:column;align-items:flex-start}}
 @media(max-width:640px){.workflow-toolbar{flex-direction:column;align-items:stretch}.monitoring-filters{flex-direction:column}.monitoring-filters .field{min-width:0}.coverage-controls{align-items:stretch}.coverage-controls .field{min-width:0;width:100%;flex-basis:100%}.syllabus-course>header{align-items:flex-start;padding:18px}.syllabus-progress{flex-direction:column;align-items:flex-start;padding:16px 18px}.syllabus-progress progress{width:100%}.syllabus-topics{padding:0 18px}.syllabus-topics article{flex-wrap:wrap}.syllabus-topics article>div{flex-basis:100%}.hod-monitoring-snapshot{padding:18px}}
+.assistant-timetable-trigger{display:inline-flex;align-items:center;gap:6px;border:1px solid #c6d6bd;border-radius:7px;padding:8px 10px;background:#f3f8ed;color:#244e3e;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.assistant-timetable-trigger:hover{background:#e3eedc}
+.timetable-backdrop{position:fixed;inset:0;z-index:80;display:flex;justify-content:center;align-items:center;padding:22px;background:#112a1f8c;overflow:auto}
+.timetable-agent{width:min(1080px,100%);max-height:calc(100dvh - 44px);overflow:auto;background:#fff;border:1px solid #dce6d7;border-radius:14px;box-shadow:0 22px 70px #122a1f44;color:#243b32}
+.timetable-agent>header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:25px 28px 20px;border-bottom:1px solid #e4ebe0}
+.timetable-agent>header h2{margin:7px 0 6px;color:#244e3e;font-size:23px}
+.timetable-agent>header p{margin:0;max-width:700px;color:#718166;font-size:12px;line-height:1.7}
+.timetable-upload-form,.timetable-draft{padding:24px 28px 28px}
+.timetable-upload-form{display:grid;gap:18px;max-width:700px}
+.timetable-upload-form .field{margin:0}
+.timetable-upload-form textarea{min-height:85px}
+.timetable-agent-actions{display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.timetable-draft-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.timetable-draft-summary h3{margin:10px 0 4px;color:#244e3e;font-size:16px;line-height:1.5}
+.timetable-draft-summary p{margin:0;color:#77856f;font-size:11px}
+.timetable-review-note{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:18px;border:1px solid #dce8d3;border-radius:8px;background:#f5f9ef;color:#567052;font-size:11px;line-height:1.6}
+.timetable-review-note svg{flex-shrink:0;color:#3a6a4d}
+.timetable-rows{display:grid;gap:12px}
+.timetable-row{padding:16px;border:1px solid #e1e9dc;border-radius:9px;background:#fbfcf9}
+.timetable-row-heading{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;margin-bottom:13px}
+.timetable-row-heading strong{color:#244e3e;font-size:13px}
+.timetable-row-heading small{max-width:70%;color:#7b896f;font-size:10px;line-height:1.5;text-align:right;overflow-wrap:anywhere}
+.timetable-row-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.timetable-row-fields label{display:grid;gap:6px;color:#66785e;font-size:10px;font-weight:600}
+.timetable-row-fields input,.timetable-row-fields select{width:100%;min-width:0;padding:9px 10px;border:1px solid #dce6d7;border-radius:6px;background:#fff;color:#29463a;font:inherit;font-size:12px}
+.timetable-row-fields input:focus,.timetable-row-fields select:focus{outline:2px solid #a4c38f;outline-offset:1px}
+.timetable-row-fields small{font-size:10px;font-weight:400;color:#8a8069;line-height:1.4}
+.timetable-row-fields em{font-size:10px;font-style:normal;font-weight:400;color:#a0523e;line-height:1.4}
+.timetable-row-error{display:flex;align-items:flex-start;gap:6px;margin:10px 0 0;color:#a0523e;font-size:11px;line-height:1.5}
+.timetable-row-error svg{flex-shrink:0;margin-top:1px}
+@media(max-width:800px){.timetable-row-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.timetable-backdrop{padding:0}.timetable-agent{max-height:100dvh;border-radius:0;border-width:0}.timetable-agent>header{padding:20px}.timetable-upload-form,.timetable-draft{padding:20px}.timetable-draft-summary{flex-direction:column}.timetable-row-fields{grid-template-columns:1fr}.timetable-row-heading{flex-direction:column}.timetable-row-heading small{max-width:100%;text-align:left}}
