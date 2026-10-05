@@ -3,6 +3,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import { Annotation, StateGraph, START, END } from '@langchain/langgraph';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { timetableConflict } from './timetable-validation.js';
 
 const fail = (status, message) => { throw Object.assign(new Error(message), { status }); };
 const now = () => new Date().toISOString();
@@ -204,8 +205,7 @@ function validateRows(db, rows, catalog) {
     for (const key of ['start_time', 'end_time']) if (!time.test(row[key] || '')) issue(index, key, 'time', 'Enter an unambiguous time in 24-hour HH:MM format.');
     if (time.test(row.start_time || '') && time.test(row.end_time || '') && row.end_time <= row.start_time) issue(index, 'end_time', 'duration', 'End time must be after start time on the same day.');
     if (row.day_of_week !== null && time.test(row.start_time || '') && time.test(row.end_time || '') && row.end_time > row.start_time) {
-      const conflict = db.prepare(`SELECT id FROM timetable WHERE day_of_week=? AND start_time<? AND end_time>?
-        AND (class_id=? OR faculty_id=? OR (room!='' AND lower(trim(room))=?)) LIMIT 1`).get(row.day_of_week, row.end_time, row.start_time, row.class_id, row.faculty_id, normalized(row.room));
+      const conflict = timetableConflict(db, row);
       if (conflict) issue(index, 'session', 'conflict', 'The class, faculty member or room already has an overlapping timetable session.');
       rows.slice(0, index).forEach((other, otherIndex) => {
         if (other.day_of_week === row.day_of_week && other.start_time < row.end_time && other.end_time > row.start_time

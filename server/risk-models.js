@@ -52,7 +52,7 @@ export function importRiskPredictions(db, artifact, approvedVersion, { at = new 
     if (!student) throw new Error('A prediction references an unknown or inactive student.');
     if (SUBJECT_TARGETS.has(model.target) && !row.subject_id) throw new Error('This outcome requires a subject_id.');
     if (row.subject_id && !db.prepare('SELECT id FROM subjects WHERE id=? AND department_id=?').get(row.subject_id, student.department_id)) throw new Error('Prediction subject must belong to the student department.');
-    const key = `${row.student_id}:${row.subject_id || ''}:${row.observed_at}`;
+    const key = `${row.student_id}:${row.subject_id || ''}:${Date.parse(row.observed_at)}`;
     if (seen.has(key)) throw new Error('The artifact contains duplicate student/subject snapshots.');
     seen.add(key);
     const observed = Date.parse(row.observed_at), created = Date.parse(row.created_at);
@@ -95,7 +95,7 @@ export function importRiskPredictions(db, artifact, approvedVersion, { at = new 
 export function studentRisk(db, studentId, at = new Date()) {
   const predictions = [], abstentions = [], models = db.prepare('SELECT m.*,c.target,c.horizon_days,c.max_age_days,c.min_coverage FROM model_versions m JOIN risk_model_contracts c ON c.model_id=m.id WHERE m.active=1 AND m.validated=1 ORDER BY c.target,c.horizon_days').all();
   for (const model of models) {
-    const snapshots = db.prepare('SELECT r.*,s.name subject_name FROM risk_snapshots r LEFT JOIN subjects s ON s.id=r.subject_id WHERE r.student_id=? AND r.model_id=? ORDER BY r.observed_at DESC,r.created_at DESC,r.rowid DESC').all(studentId, model.id);
+    const snapshots = db.prepare('SELECT r.*,s.name subject_name FROM risk_snapshots r LEFT JOIN subjects s ON s.id=r.subject_id WHERE r.student_id=? AND r.model_id=? ORDER BY julianday(r.observed_at) DESC,julianday(r.created_at) DESC,r.rowid DESC').all(studentId, model.id);
     const seen = new Set();
     if (!snapshots.length) abstentions.push({ target: model.target, horizon_days: model.horizon_days, model_version: model.version, status: 'missing', reason: 'No feature snapshot has been scored for this student.' });
     for (const row of snapshots) {

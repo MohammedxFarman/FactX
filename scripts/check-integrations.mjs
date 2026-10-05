@@ -21,27 +21,32 @@ const get = async (base, route, headers = {}) => {
 report('Frontend', existsSync('dist/index.html') ? 'READY' : 'MISSING',
   existsSync('dist/index.html') ? 'Production bundle exists; npm run build refreshes it.' : 'Run npm run build.');
 
-const aiKeys = ['OLLAMA_URL', 'OLLAMA_EMBED_MODEL', 'OLLAMA_CHAT_MODEL'];
-const missingAi = aiKeys.filter(key => !process.env[key]);
-if (missingAi.length) report('Document AI', 'MISSING', `Set ${missingAi.join(', ')} in .env. Record lookup remains available.`);
-else {
+let installedModels;
+async function checkModels(name, keys, readyDetail) {
+  const missing = ['OLLAMA_URL', ...keys].filter(key => !process.env[key]);
+  if (missing.length) {
+    report(name, 'MISSING', `Set ${missing.join(', ')} in .env. Record lookup and saved draft review remain available.`);
+    return;
+  }
   try {
-    const data = await get(process.env.OLLAMA_URL, '/api/tags', process.env.OLLAMA_API_KEY ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` } : {});
-    if (!Array.isArray(data.models)) throw new Error('Service returned an invalid model list.');
-    const normalize = name => name.includes(':') ? name : `${name}:latest`;
-    const installed = new Set(data.models.map(model => normalize(model.name || model.model || '')));
-    const absent = aiKeys.slice(1).filter(key => !installed.has(normalize(process.env[key])));
-    report('Document AI', absent.length ? 'MISSING' : 'READY', absent.length
+    installedModels ??= get(process.env.OLLAMA_URL, '/api/tags', process.env.OLLAMA_API_KEY ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` } : {}).then(data => {
+      if (!Array.isArray(data.models) || !data.models.every(model => model && typeof (model.name || model.model) === 'string')) {
+        throw new Error('Service returned an invalid model list.');
+      }
+      return data.models;
+    });
+    const normalize = value => value.includes(':') ? value : `${value}:latest`;
+    const installed = new Set((await installedModels).map(model => normalize(model.name || model.model)));
+    const absent = keys.filter(key => !installed.has(normalize(process.env[key])));
+    report(name, absent.length ? 'MISSING' : 'READY', absent.length
       ? `Configured model is not installed for ${absent.join(', ')}.`
-      : 'Service reachable and both models listed. Index documents and verify a cited answer before use.');
-  } catch (error) { report('Document AI', 'ERROR', error instanceof TypeError ? 'Cannot reach the service; check URL, network and credentials.' : error.message); }
+      : readyDetail);
+  } catch (error) { report(name, 'ERROR', error instanceof TypeError ? 'Cannot reach the service; check URL, network and credentials.' : error.message); }
 }
-
-const timetableKeys = ['OLLAMA_URL', 'OLLAMA_CHAT_MODEL', 'OLLAMA_VISION_MODEL'];
-const missingTimetable = timetableKeys.filter(key => !process.env[key]);
-report('Timetable agent', missingTimetable.length ? 'MISSING' : 'READY', missingTimetable.length
-  ? `Set ${missingTimetable.join(', ')} for PDF/image extraction. The assistant and record lookup can still run without it.`
-  : 'LangGraph extraction configuration is present; upload a test timetable and review the draft before confirming changes.');
+await checkModels('Document AI', ['OLLAMA_EMBED_MODEL', 'OLLAMA_CHAT_MODEL'],
+  'Service reachable and both models listed. Index documents and verify a cited answer before use.');
+await checkModels('Timetable agent', ['OLLAMA_CHAT_MODEL', 'OLLAMA_VISION_MODEL'],
+  'Service reachable and chat/vision models listed. Verify text PDF and image extraction with a reviewed timetable.');
 
 if (!process.env.JUDGE_URL) report('Code execution', 'MISSING', 'Set JUDGE_URL for a separately hosted Judge0 service; optionally set JUDGE_TOKEN.');
 else {
@@ -50,7 +55,7 @@ else {
     if (!Array.isArray(languages) || !languages.every(item => Number.isInteger(item.id) && typeof item.name === 'string')) throw new Error('Service returned an invalid language list.');
     const supported = [/^Python \(3/, /^JavaScript \(Node/, /^C \(GCC/, /^C\+\+ \(GCC/, /^Java \(/];
     const count = supported.filter(pattern => languages.some(language => pattern.test(language.name))).length;
-    report('Code execution', count ? 'READY' : 'MISSING', `${count}/5 application languages available. Live execution and sandbox isolation still require validation.`);
+    report('Code execution', count === supported.length ? 'READY' : 'MISSING', `${count}/5 application languages available. Live execution and sandbox isolation still require validation.`);
   } catch (error) { report('Code execution', 'ERROR', error instanceof TypeError ? 'Cannot reach the service; check URL, network and credentials.' : error.message); }
 }
 

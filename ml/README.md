@@ -2,13 +2,15 @@
 
 FactX keeps model estimates separate from transparent support rules. No model is bundled, predictions are never fabricated, and training never activates a model automatically.
 
-The pipeline supports four independently defined outcomes: `course_failure`, `attendance_shortage`, `assignment_delay`, and `lab_failure`. Features are measured at `observed_at`; the approved outcome is recorded later at `outcome_observed_at`. The loader rejects missing base measurements, future or leaking labels, invalid ranges, and small datasets. Missing optional measurements remain missing and can lead to an `insufficient_evidence` abstention.
+The pipeline supports four independently defined outcomes: `course_failure`, `attendance_shortage`, `assignment_delay`, and `lab_failure`. Features are measured at `observed_at`; the approved outcome is recorded later at `outcome_observed_at`. The loader rejects missing dates, malformed or nonfinite measurements, invalid ranges/counts, and outcomes recorded before the cutoff. Training requires observed base features, both outcomes, and minimum sample counts. Prediction accepts missing measurements and returns `insufficient_evidence` before scoring rows below the reviewed coverage threshold.
 
 Install the optional Python dependencies:
 
 ```powershell
 python -m pip install -r ml/requirements.txt
 ```
+
+Run `npm run test:ml` after installing these dependencies to check missing-evidence handling and input validation using isolated synthetic fixtures. These tests do not train or activate an institutional model.
 
 Train candidates for one reviewed outcome and horizon:
 

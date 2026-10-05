@@ -55,7 +55,7 @@ Optional: copy `.env.example` to `.env` and configure the values before starting
 - Private activity, assignment-submission, and leave attachments with ownership and review locks.
 - Institution preferences for support thresholds, profile editing, notifications; administrative account-access changes revoke existing sessions.
 - Permission-filtered PDF/text indexing and search, optional Ollama document RAG with embeddings and citations, and private assistant history.
-- LangGraph timetable assistant for Faculty/HOD/Admin PDF or image uploads, authorized assignment matching, conflict validation, human review, and confirmed writes.
+- LangGraph timetable assistant for Faculty/HOD/Admin PDF or image uploads, authorized assignment matching, resumable drafts, session corrections/additions/removal, conflict validation, human review, and confirmed writes. Completed imports are read-only and refresh the timetable immediately.
 - Optional versioned ML training, evaluation, calibration, abstention, prediction, and SHAP explanation pipeline in `ml/` for four independently labeled risk outcomes.
 
 ## Security boundaries
@@ -97,6 +97,8 @@ See [the integration setup guide](docs/INTEGRATIONS.md) for configuration and ac
 
 ## Verification
 
+See the [project verification report](docs/PROJECT_STATUS.md) for completed changes, current results, and remaining live-service dependencies. The [deployment acceptance guide](docs/DEPLOYMENT.md) covers host setup, integration checks, and recovery verification.
+
 ```powershell
 npm test
 npm run build
@@ -104,7 +106,7 @@ npm run test:browser
 npm run doctor
 ```
 
-`npm run verify` runs integration tests, builds the frontend, and runs both browser suites in sequence. API tests include controlled Ollama and Judge0 services, permission boundaries, attachment ownership/review locks, and unavailable-service behavior. These fixtures are test-only and are not real AI models or code sandboxes.
+`npm run verify` runs integration tests, builds the frontend, and runs all three browser suites in sequence, including timetable review and refresh. `npm run verify:all` also runs the Python ML regression checks and requires the optional Python dependencies. API tests include controlled Ollama and Judge0 services, permission boundaries, attachment ownership/review locks, and unavailable-service behavior. These fixtures are test-only and are not real AI models or code sandboxes.
 
 Integration tests create temporary databases only. Browser tests create separate temporary workspaces, verify navigation and linked leave/substitution/syllabus/monitoring flows on desktop/mobile, and save screenshots in `test-results/`. They do not seed or change your real database. Tests require a local Playwright-compatible Chromium installation.
 

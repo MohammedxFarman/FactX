@@ -5,11 +5,38 @@ from datetime import datetime, timezone
 from pathlib import Path
 import joblib
 import numpy as np
+import pandas as pd
 from data import FEATURES, load_dataset
 
 
 def missing(value):
-    return value is None or (isinstance(value, float) and np.isnan(value))
+    return bool(pd.isna(value))
+
+
+def generate_predictions(model, frame, manifest):
+    """Abstain before calling the estimator when a row lacks reviewed evidence."""
+    features = manifest["features"]
+    if features != FEATURES:
+        raise ValueError("The reviewed feature order does not match this prediction pipeline.")
+    output = []
+    for _, row in frame.iterrows():
+        missing_features = [feature for feature in features if missing(row[feature])]
+        coverage = 1 - len(missing_features) / len(features)
+        common = {"student_id": str(row.student_id), "subject_id": str(row.subject_id) if "subject_id" in row and not missing(row.subject_id) else None,
+                  "observed_at": row.observed_at.isoformat(), "created_at": datetime.now(timezone.utc).isoformat(), "coverage": coverage,
+                  "missing_features": missing_features, "feature_values": {feature: None if missing(row[feature]) else float(row[feature]) for feature in features}}
+        if manifest["target"] in ("course_failure", "lab_failure") and not common["subject_id"]:
+            raise ValueError("This outcome requires a subject_id for every prediction.")
+        if coverage < manifest.get("min_coverage", .75):
+            output.append({**common, "probability": None, "category": "insufficient_evidence", "factors": [], "evidence_reason": "Feature coverage is below the reviewed minimum; missing evidence is not low risk."})
+            continue
+        model_row = row.to_frame().T[features].astype(float)
+        value = float(model.predict_proba(model_row)[0, 1])
+        if not np.isfinite(value) or not 0 <= value <= 1:
+            raise ValueError("The model returned an invalid probability.")
+        review, high = manifest["thresholds"]["review"], manifest["thresholds"]["high"]
+        output.append({**common, "probability": value, "category": "high" if value >= high else "medium" if value >= review else "low", "factors": explain(model, model_row), "evidence_reason": ""})
+    return output
 
 
 def explain(model, row):
@@ -53,17 +80,7 @@ def main():
     key = ["student_id", "subject_id"] if "subject_id" in frame else ["student_id"]
     frame = frame.drop_duplicates(key, keep="last")
     model = joblib.load(directory / f"{manifest['selected_algorithm']}.joblib")
-    probability = model.predict_proba(frame[FEATURES])[:, 1]
-    output = []
-    for index, (_, row) in enumerate(frame.iterrows()):
-        missing_features = [feature for feature in manifest["features"] if missing(row[feature])]
-        coverage = 1 - len(missing_features) / len(manifest["features"])
-        common = {"student_id": str(row.student_id), "subject_id": str(row.subject_id) if "subject_id" in row and not missing(row.subject_id) else None, "observed_at": row.observed_at.isoformat(), "created_at": datetime.now(timezone.utc).isoformat(), "coverage": coverage, "missing_features": missing_features}
-        if coverage < manifest.get("min_coverage", .75):
-            output.append({**common, "probability": None, "category": "insufficient_evidence", "factors": [], "evidence_reason": "Feature coverage is below the reviewed minimum; missing evidence is not low risk."})
-            continue
-        value = float(probability[index]); review, high = manifest["thresholds"]["review"], manifest["thresholds"]["high"]
-        output.append({**common, "probability": value, "category": "high" if value >= high else "medium" if value >= review else "low", "factors": explain(model, row.to_frame().T), "evidence_reason": ""})
+    output = generate_predictions(model, frame, manifest)
     destination = Path(args.output)
     with destination.open("x", encoding="utf-8") as handle:
         json.dump({"model": manifest, "algorithm": manifest["selected_algorithm"], "predictions": output}, handle, indent=2)

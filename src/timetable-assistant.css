@@ -1,0 +1,13 @@
+.timetable-error{margin:18px 28px 0}
+.timetable-status{padding:18px 28px 0;font-size:13px;line-height:1.7;color:#567052}
+.timetable-saved{padding:0 28px 28px}
+.timetable-saved h3{font-size:15px}
+.timetable-saved p,.timetable-saved small{font-size:12px;color:#718166;line-height:1.7}
+.timetable-saved>div{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px 0;border-bottom:1px solid #e4ebe0;overflow-wrap:anywhere}
+.timetable-saved>div>span{min-width:0;font-size:13px}
+.timetable-saved small{display:block}
+.timetable-saved .button{white-space:normal;overflow-wrap:anywhere;max-width:60%}
+.timetable-row-fields{border:0;margin:0;padding:0;min-width:0}
+.timetable-row-fields:disabled{opacity:.7}
+.timetable-agent-actions{margin-top:18px}
+@media(max-width:560px){.timetable-saved{padding:0 20px 20px}.timetable-status{padding:16px 20px 0}.timetable-error{margin:16px 20px 0}.timetable-saved>div{align-items:flex-start;flex-direction:column}.timetable-saved .button{max-width:100%}.timetable-agent-actions .button{white-space:normal}}

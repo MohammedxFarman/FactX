@@ -66,3 +66,20 @@ test('subject risk outcomes require a subject-scoped prediction', () => {
     assert.equal(importRiskPredictions(fixtureData.db, valid, valid.model.version).inserted, 1);
   } finally { fixtureData.db.close(); rmSync(fixtureData.directory, { recursive: true, force: true }); }
 });
+
+test('latest risk snapshot follows the actual instant across timezone offsets', () => {
+  const data = fixture();
+  try {
+    const at = new Date('2026-10-03T12:00:00Z');
+    const older = artifact({ student: data.student, now: at });
+    Object.assign(older.predictions[0], { observed_at: '2026-10-03T13:00:00+05:30', created_at: '2026-10-03T13:00:00+05:30' });
+    importRiskPredictions(data.db, older, older.model.version, { at });
+    const newer = structuredClone(older);
+    Object.assign(newer.predictions[0], { observed_at: '2026-10-03T09:00:00Z', created_at: '2026-10-03T09:00:00Z', probability: .2, category: 'low' });
+    importRiskPredictions(data.db, newer, newer.model.version, { at });
+    assert.equal(studentRisk(data.db, data.student, at).predictions[0].category, 'low');
+    const duplicate = structuredClone(newer);
+    duplicate.predictions.push({ ...duplicate.predictions[0], observed_at: '2026-10-03T14:30:00+05:30' });
+    assert.throws(() => importRiskPredictions(data.db, duplicate, duplicate.model.version, { at }), /duplicate/);
+  } finally { data.db.close(); rmSync(data.directory, { recursive: true, force: true }); }
+});

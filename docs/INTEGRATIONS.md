@@ -2,7 +2,7 @@
 
 ## Local verification
 
-From `D:\Finalyr`, run `npm run verify`. This uses temporary databases for API and browser checks, then saves browser screenshots in `test-results/`. Run `npm run doctor` for the current integration configuration; `npm run doctor -- --strict` fails if any integration is missing or unreachable. The checker never prints credentials and does not generate answers, submit code, or activate models.
+From `D:\Finalyr`, run `npm run verify` (or `npm run verify:all` to include the optional Python ML checks). This uses temporary databases for API and browser checks, then saves browser screenshots in `test-results/`. Run `npm run doctor` for the current integration configuration; `npm run doctor -- --strict` fails if any integration is missing or unreachable. The checker verifies installed chat, embedding, and vision models and all five advertised programming languages. It never prints credentials and does not generate answers, submit code, or activate models. A `READY` result establishes availability only; the acceptance checks below establish whether each service works with your documents and deployment.
 
 Copy `.env.example` to `.env` if it does not already exist. Keep `.env` and `data/` private. Restart `npm start` after changing configuration. Test runners do not load `.env`; run them without externally injected production service variables.
 
