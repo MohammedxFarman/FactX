@@ -97,6 +97,14 @@ See [the integration setup guide](docs/INTEGRATIONS.md) for configuration and ac
 
 ## Verification
 
+## Interface redesign
+
+The academic workspace now uses a responsive task-based shell with a detached desktop sidebar, mobile dock, command palette (`Ctrl/Cmd+K`), light/dark themes, subject colour tokens, skeleton/error/empty states, mobile sheets, and context actions. Home groups today’s classes, deadlines, attendance and quick links. Timetable, attendance, study materials, assessments, labs and analytics each have a dedicated summary-led page. The lab workspace lazy-loads Monaco, supports custom and public sample runs through the separate sandbox, preserves hidden tests, and records secure-mode review signals.
+
+The design tokens and page map are documented in [the UI redesign audit](docs/UI_REDESIGN.md). Add a section by creating a typed page under `src/pages`, loading it with `React.lazy`, adding its page identifier to `NAV`, and composing `Section`, `Metric`, `EmptyState`, `Skeleton`, and `SubjectChip` from `src/ui`. Keep writes behind the existing role-scoped API and add a browser smoke test for a new task flow.
+
+Verification includes `npm run typecheck`, `npm run lint`, `npm run test:ui`, and the existing API/workflow/browser suites. The current Lighthouse measurements are recorded in `test-results/performance-summary.json`: desktop 99 performance / 0.81s LCP / 0 CLS; mobile 80 performance / 3.95s LCP / 0 CLS. The mobile target remains below 90 because the legacy institutional bundle is loaded before authentication; a follow-up should split the public landing/auth entry from the authenticated application entry. INP requires field telemetry or interaction-mode Lighthouse runs and is not claimed from navigation-only Lighthouse.
+
 See the [project verification report](docs/PROJECT_STATUS.md) for completed changes, current results, and remaining live-service dependencies. The [deployment acceptance guide](docs/DEPLOYMENT.md) covers host setup, integration checks, and recovery verification.
 
 ```powershell

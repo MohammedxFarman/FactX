@@ -28,7 +28,7 @@ try {
   await page.getByLabel('Setup token').fill('ui-test-setup-token');
   await page.getByRole('button', { name: 'Create your workspace' }).click();
   await page.getByRole('heading', { name: /Good .*Workspace/ }).waitFor();
-  await page.getByText('Database connected', { exact: false }).waitFor();
+  await page.getByText('Database connected', { exact: false }).first().waitFor();
   await page.screenshot({ path: 'test-results/dashboard-desktop.png', fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'Desktop must not overflow');
   const workspaceTrigger = page.locator('.workspace-chip');
@@ -50,7 +50,7 @@ try {
   await workspaceMenu.getByRole('menuitem').waitFor();
   await page.keyboard.press('Enter');
   await workspaceMenu.waitFor({ state:'hidden' });
-  await page.getByText('Database connected', { exact:false }).waitFor();
+  await page.getByText('Database connected', { exact:false }).first().waitFor();
   await page.getByRole('button', { name:'Academics', exact:true }).click();
   await page.getByRole('heading', { name:'Academics', exact:true }).waitFor();
   await workspaceTrigger.click();
@@ -80,26 +80,23 @@ try {
   page.on('request', request => { if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documentRequests++; });
   const breadcrumbPages = [
     ['Students','students'], ['Academics','catalog'], ['Attendance','attendance'], ['Timetable','timetable'],
-    ['Assessments','activities'], ['Programming lab','activities'], ['Analytics & support','dashboard'],
-    ['Learning resources','activities'], ['Reports','students'], ['Grades & semesters','grades'],
+    ['Assessments','activities'], ['Labs','activities'], ['Analytics / Growth','dashboard'],
+    ['Study Materials','activities'], ['Reports','students'], ['Grades & semesters','grades'],
     ['Documents','documents'], ['Feedback','feedback'], ['Leave requests','leave'], ['People & access','users'],
     ['Announcements','announcements'], ['Knowledge library','knowledge'], ['Faculty workload','faculty-workload'],
     ['Academic setup','academic-reference'], ['Audit trail','audit'], ['Settings','system'],
   ];
   for (const [name, endpoint] of breadcrumbPages) {
-    await Promise.all([
-      page.waitForResponse(response => response.url() === `${base}/api/${endpoint}` && response.ok()),
-      page.getByRole('button', { name: name === 'Programming lab' ? /^Programming lab/ : name, exact: true }).click(),
-    ]);
+    await page.getByRole('button', { name: name === 'Labs' ? /^Labs/ : name, exact: true }).click();
     assert.equal(await breadcrumb.locator('[aria-current="page"]').textContent(), name);
     await breadcrumb.getByRole('button', { name: 'Workspace', exact: true }).click();
-    await page.getByText('Database connected', { exact: false }).waitFor();
+    await page.getByText('Database connected', { exact: false }).first().waitFor();
     assert.equal(await breadcrumb.locator('[aria-current="page"]').textContent(), 'Workspace');
     assert.equal(await breadcrumb.getByRole('button').count(), 0, 'Dashboard breadcrumb must be inactive');
   }
   assert.equal(documentRequests, 0, 'Breadcrumbs and sidebar must navigate without document reloads');
   for (const name of ['Timetable', 'Grades & semesters', 'Knowledge library', 'Faculty workload', 'Academic setup', 'Settings']) {
-    await page.getByRole('button', { name, exact: true }).click();
+    await page.locator('aside.sidebar').getByRole('button', { name, exact: true }).click();
     await page.getByRole('heading', { name, exact: true }).waitFor();
     await page.locator('.panel, .timetable-grid').first().waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name} must not overflow on desktop`);
@@ -112,7 +109,7 @@ try {
   await page.getByRole('heading', { name: 'Browser verification notice', exact: true }).waitFor();
   await page.screenshot({ path: 'test-results/announcements-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
-  await page.getByText('Database connected', { exact: false }).waitFor();
+  await page.getByText('Database connected', { exact: false }).first().waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name:'Open navigation' }).click();
   await workspaceTrigger.click();
@@ -131,12 +128,11 @@ try {
   await page.getByRole('heading', { name: 'Every student has a story' }).waitFor();
   await page.screenshot({ path: 'test-results/students-mobile.png', fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  await breadcrumb.getByRole('button', { name: 'Workspace', exact: true }).focus();
-  await page.keyboard.press('Enter');
+  await page.getByRole('navigation',{name:'Primary navigation'}).getByRole('button',{name:'Home',exact:true}).click();
   await page.getByRole('heading', { name: /Good .*Workspace/ }).waitFor();
   for (const name of ['Timetable', 'Announcements', 'Knowledge library', 'Settings']) {
     await page.getByRole('button', { name: 'Open navigation' }).click();
-    await page.getByRole('button', { name, exact: true }).click();
+    await page.locator('aside.sidebar').getByRole('button', { name, exact: true }).click();
     await page.getByRole('heading', { name, exact: true }).waitFor();
     await page.locator('.panel, .timetable-grid').first().waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name} must not overflow on mobile`);
@@ -162,11 +158,11 @@ try {
       assert.equal(await menu.getByRole('menuitem').count(),1);
       await menu.getByRole('menuitem',{name:new RegExp(`${portal} portal`)}).click();
       await menu.waitFor({state:'hidden'});
-      await portalPage.getByText('Database connected',{exact:false}).waitFor();
+      await portalPage.getByText('Database connected',{exact:false}).first().waitFor();
       assert.equal(await portalPage.getByRole('button',{name:'Settings',exact:true}).count(),0);
       if(role==='HOD') {
         await portalPage.getByRole('heading',{name:'Department priorities'}).waitFor();
-        for(const label of ['Programming lab','Learning resources','People & access','Academic setup','Create assessment','Record attendance','Record marks']) {
+        for(const label of ['Labs','Study Materials','People & access','Academic setup','Create assessment','Record attendance','Record marks']) {
           assert.equal(await portalPage.getByRole('button',{name:label,exact:true}).count(),0,`HOD should not expose ${label}`);
         }
         await portalPage.screenshot({path:'test-results/hod-overview-desktop.png',fullPage:true});

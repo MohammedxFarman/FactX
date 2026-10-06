@@ -46,7 +46,7 @@ try {
   await page.getByLabel('Institutional email').fill('faculty@timetable-ui.invalid');
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in to FactX' }).click();
-  await page.getByText('Database connected', { exact: false }).waitFor();
+  await page.getByText('Database connected', { exact: false }).first().waitFor();
   await page.locator('aside.sidebar').getByRole('button', { name: 'Timetable', exact: true }).click();
   await page.getByRole('heading', { name: 'Timetable', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Open assistant', exact: true }).click();

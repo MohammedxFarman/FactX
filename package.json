@@ -12,7 +12,10 @@
     "test:ml": "python -m unittest discover -s tests -p test_ml_pipeline.py",
     "doctor": "node scripts/check-integrations.mjs",
     "verify": "npm test && npm run build && npm run test:browser",
-    "verify:all": "npm run verify && npm run test:ml"
+    "verify:all": "npm run verify && npm run test:ml && npm run test:ui",
+    "test:ui": "node tests/redesign-browser.mjs && node tests/performance.mjs",
+    "lint": "eslint src server tests",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
@@ -20,8 +23,11 @@
     "@langchain/core": "^1.2.14",
     "@langchain/langgraph": "^1.4.18",
     "@napi-rs/canvas": "^1.0.9",
+    "chart.js": "^4.5.1",
     "express": "^5.1.0",
     "lucide-react": "^0.468.0",
+    "monaco-editor": "^0.56.0",
+    "motion": "^14.0.0",
     "multer": "^2.0.2",
     "pdfjs-dist": "^4.10.38",
     "pdfkit": "^0.17.2",
@@ -30,9 +36,18 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.51.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.5.0",
     "concurrently": "^9.1.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "lighthouse": "^12.6.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
     "vite": "^6.3.0"
   }
 }
