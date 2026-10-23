@@ -11,6 +11,7 @@ export function scopes(db, user) {
   const students = () => db.prepare("SELECT u.id,u.name,u.email,u.role,u.department_id,u.class_id,u.roll_number,u.active,u.created_at,c.name class_name,d.name department_name FROM users u LEFT JOIN classes c ON c.id=u.class_id LEFT JOIN departments d ON d.id=u.department_id WHERE u.role='STUDENT' ORDER BY u.name").all().filter(s => canStudent(s.id));
   const canActivity = a => {
     const cfg=JSON.parse(a.config);
+    if(user.role==='STUDENT' && cfg.startAt && Date.parse(cfg.startAt)>Date.now())return false;
     const targets=db.prepare('SELECT * FROM activity_targets WHERE activity_id=?').all(a.id);
     if(user.role==='STUDENT')return cfg.assignmentMode==='individual'?targets.some(t=>t.student_id===user.id):canClass(a.class_id)||targets.some(t=>t.class_id===user.class_id||t.student_id===user.id);
     return canClass(a.class_id)||targets.some(t=>t.class_id?canClass(t.class_id):t.student_id&&canStudent(t.student_id));

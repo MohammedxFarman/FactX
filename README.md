@@ -29,6 +29,8 @@ Optional: copy `.env.example` to `.env` and configure the values before starting
 
 ## Working modules
 
+Faculty can now open **Assessment Studio** from the existing assistant or assessment creation buttons: prompt/reference upload, private draft editing, student demo, explicit approval and scheduling. It includes task-level marks, saved student work, and ordered learning modules. See [the studio guide and continuation report](docs/ASSESSMENT_STUDIO.md) for supported formats, setup, verification and remaining hosted-lab/mobile/desktop work.
+
 - Four roles, password hashing with scrypt, opaque server-side sessions, account disabling, password reset, and session revocation.
 - Department/class/subject management and faculty assignments.
 - Student search by name or roll number and consolidated student reports.

@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test';
+import {clickNavigation} from './navigation.mjs';
 import { mkdtempSync, mkdirSync, readdirSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
@@ -51,12 +52,12 @@ try {
   await page.keyboard.press('Enter');
   await workspaceMenu.waitFor({ state:'hidden' });
   await page.getByText('Database connected', { exact:false }).first().waitFor();
-  await page.getByRole('button', { name:'Academics', exact:true }).click();
+  await clickNavigation(page,'Academics');
   await page.getByRole('heading', { name:'Academics', exact:true }).waitFor();
   await workspaceTrigger.click();
   await workspaceMenu.getByRole('menuitem', { name:/Administrator portal/ }).click();
   await page.getByRole('heading', { name:/Good .*Workspace/ }).waitFor();
-  await page.getByRole('button', { name: 'Academics', exact: true }).click();
+  await clickNavigation(page,'Academics');
   await page.getByRole('button', { name: 'Department', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('UI Test Department');
   await page.getByLabel('Code', { exact: true }).fill('UITEST');
@@ -87,7 +88,7 @@ try {
     ['Academic setup','academic-reference'], ['Audit trail','audit'], ['Settings','system'],
   ];
   for (const [name, endpoint] of breadcrumbPages) {
-    await page.getByRole('button', { name: name === 'Labs' ? /^Labs/ : name, exact: true }).click();
+    await clickNavigation(page,name === 'Labs' ? /^Labs/ : name);
     assert.equal(await breadcrumb.locator('[aria-current="page"]').textContent(), name);
     await breadcrumb.getByRole('button', { name: 'Workspace', exact: true }).click();
     await page.getByText('Database connected', { exact: false }).first().waitFor();
@@ -96,12 +97,12 @@ try {
   }
   assert.equal(documentRequests, 0, 'Breadcrumbs and sidebar must navigate without document reloads');
   for (const name of ['Timetable', 'Grades & semesters', 'Knowledge library', 'Faculty workload', 'Academic setup', 'Settings']) {
-    await page.locator('aside.sidebar').getByRole('button', { name, exact: true }).click();
+    await clickNavigation(page,name);
     await page.getByRole('heading', { name, exact: true }).waitFor();
     await page.locator('.panel, .timetable-grid').first().waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name} must not overflow on desktop`);
   }
-  await page.getByRole('button', { name: 'Announcements', exact: true }).click();
+  await clickNavigation(page,'Announcements');
   await page.getByRole('button', { name: 'Publish announcement', exact: true }).click();
   await page.getByLabel('Title', { exact: true }).fill('Browser verification notice');
   await page.getByLabel('Message', { exact: true }).fill('This notice belongs only to the temporary browser test workspace.');
@@ -124,7 +125,7 @@ try {
   await page.screenshot({ path: 'test-results/dashboard-mobile.png', fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'Mobile must not overflow');
   await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.getByRole('button', { name: 'Students', exact: true }).click();
+  await clickNavigation(page,'Students');
   await page.getByRole('heading', { name: 'Every student has a story' }).waitFor();
   await page.screenshot({ path: 'test-results/students-mobile.png', fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
@@ -132,7 +133,7 @@ try {
   await page.getByRole('heading', { name: /Good .*Workspace/ }).waitFor();
   for (const name of ['Timetable', 'Announcements', 'Knowledge library', 'Settings']) {
     await page.getByRole('button', { name: 'Open navigation' }).click();
-    await page.locator('aside.sidebar').getByRole('button', { name, exact: true }).click();
+    await clickNavigation(page,name);
     await page.getByRole('heading', { name, exact: true }).waitFor();
     await page.locator('.panel, .timetable-grid').first().waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name} must not overflow on mobile`);
@@ -167,12 +168,12 @@ try {
         }
         await portalPage.screenshot({path:'test-results/hod-overview-desktop.png',fullPage:true});
         for(const [label,forbidden] of [['Attendance review','Take attendance'],['Assessment overview','Create assessment'],['Results & SGPA','Record grade'],['Department reports','Record marks']]) {
-          await portalPage.getByRole('button',{name:label,exact:true}).click();
+          await clickNavigation(portalPage,label);
           await portalPage.getByRole('heading',{name:label,exact:true}).waitFor();
           await portalPage.locator('.panel').first().waitFor();
           assert.equal(await portalPage.getByRole('button',{name:forbidden,exact:true}).count(),0);
         }
-        await portalPage.getByRole('button',{name:'Classes & faculty assignments',exact:true}).click();
+        await clickNavigation(portalPage,'Classes & faculty assignments');
         await portalPage.getByRole('button',{name:'Assign faculty',exact:true}).click();
         await portalPage.getByRole('dialog',{name:'Assign faculty to a class'}).waitFor();
         await portalPage.getByRole('button',{name:'Close dialog'}).click();
@@ -183,7 +184,7 @@ try {
         assert.equal(await portalPage.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'HOD dashboard must not overflow on mobile');
         await portalPage.screenshot({path:'test-results/hod-overview-mobile.png',fullPage:true});
         await portalPage.getByRole('button',{name:'Open navigation'}).click();
-        await portalPage.getByRole('button',{name:'Leave approvals',exact:true}).click();
+        await clickNavigation(portalPage,'Leave approvals');
         await portalPage.getByRole('heading',{name:'Leave approvals',exact:true}).waitFor();
       }
     } finally {await context.close();}

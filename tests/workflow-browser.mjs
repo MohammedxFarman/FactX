@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test';
+import {clickNavigation} from './navigation.mjs';
 import { mkdtempSync, mkdirSync, readdirSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
@@ -24,7 +25,7 @@ async function request(route,{body,method='GET',cookie}={}) {
 }
 async function go(page,name,endpoint) {
   if(await page.getByRole('button',{name:'Open navigation'}).isVisible())await page.getByRole('button',{name:'Open navigation'}).click();
-  await page.locator('aside').getByRole('button',{name,exact:true}).click();
+  await clickNavigation(page,name);
   if(name==='Overview')await page.getByText('Database connected',{exact:false}).first().waitFor();
   else await page.getByRole('heading',{name,exact:true}).waitFor();
 }

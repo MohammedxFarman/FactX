@@ -38,12 +38,14 @@ export function startExecutionWorker(db) {
           result = await remote(`/submissions/${encodeURIComponent(submitted.token)}?base64_encoded=true&fields=status,time,memory`);
           if (result.status?.id > 2) break;
         }
-        if (!result?.status || result.status.id <= 2) throw new Error('Sandbox evaluation timed out.');
+        if (!result?.status || result.status.id <= 2 || result.status.id >= 13) throw new Error('Sandbox evaluation did not complete successfully.');
         // Do not persist hidden input/expected output or student-controlled stdout in public results.
         testResults.push({ test: index + 1, passed: result.status.id === 3, status: result.status.description, timeSeconds: result.time === null ? null : Number(result.time), memoryKB: result.memory });
       }
       const passed = testResults.filter(t => t.passed).length;
-      db.prepare("UPDATE submissions SET status='evaluated',score=?,results=? WHERE id=?").run(passed / testResults.length * job.max_marks, JSON.stringify({ passed, total: testResults.length, tests: testResults }), job.id);
+      const tasks=config.taskGrading?config.tasks.map((task,i)=>({title:task.title,max_marks:task.marks,score:config.testCases.every((t,j)=>t.task!==i||testResults[j].passed)?task.marks:0})):null;
+      const score=tasks?tasks.reduce((n,t)=>n+t.score,0):passed/testResults.length*job.max_marks;
+      db.prepare("UPDATE submissions SET status='evaluated',score=?,results=? WHERE id=?").run(score, JSON.stringify({ passed, total: testResults.length, tests: testResults, ...(tasks?{tasks}:{}) }), job.id);
       db.prepare('INSERT INTO notifications VALUES(?,?,?,?,NULL,?)').run(randomUUID(), job.student_id, 'Your programming assessment has been evaluated', `${passed} of ${testResults.length} test cases passed.`, new Date().toISOString());
       db.prepare('INSERT INTO assessment_events VALUES(?,?,?,?,?)').run(randomUUID(), job.student_id, job.activity_id, 'code.evaluated', new Date().toISOString());
     } catch (error) {

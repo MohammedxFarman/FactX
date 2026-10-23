@@ -111,7 +111,7 @@ try {
   // The timetable renders faculty and room together; verify the actual session
   // without reloading so this also checks the assistant's refresh callback.
   const importedSession = page.locator('.timetable-grid article').filter({ hasText: 'Room B' });
-  await importedSession.waitFor();
+  await importedSession.waitFor({state:'attached'});
   assert.equal(await importedSession.locator('h3').textContent(), 'Review Subject');
   assert.equal(await importedSession.locator('p').textContent(), 'Review Class');
   assert.match(await importedSession.locator('.session-time').textContent(), /10:00.*11:00/);

@@ -84,7 +84,7 @@ function checkPixels(width, height) {
   if (!(width > 0 && height > 0) || width > 16000 || height > 16000 || width * height > limits.pixelsPerImage) fail(400, 'Each image must contain no more than 12 million pixels and have dimensions below 16,000 pixels.');
 }
 
-async function documentContent(file) {
+export async function documentContent(file) {
   if (!file?.buffer?.length) fail(400, 'Upload a PDF, PNG or JPEG timetable.');
   if (file.buffer.length > limits.bytes) fail(400, 'File exceeds the 10 MB limit.');
   if (['image/png', 'image/jpeg'].includes(file.mimetype)) {
