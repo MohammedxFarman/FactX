@@ -2,6 +2,39 @@
 
 FactX keeps model estimates separate from transparent support rules. No model is bundled, predictions are never fabricated, and training never activates a model automatically.
 
+## Synthetic pipeline check
+
+To generate an explicitly synthetic dataset and exercise all three candidate
+algorithms for each of the four outcomes, run:
+
+```powershell
+python ml/synthetic_check.py
+```
+
+The reproducible default uses seed 42 and 1,200 invented students per outcome.
+It simulates noisy future outcomes from latent factors, rather than copying the
+application's support-rule thresholds. These labels are **not real observed
+student outcomes**. The chronological split keeps 960 development students and
+240 later holdout students separate, with a 60-day gap so development outcomes
+precede the holdout features. Model selection and thresholds use development
+cross-validation only; probability calibration also keeps students in separate
+folds, including inside each outer validation fold.
+
+Generated CSVs, model files, candidate metrics, fresh-input predictions, and
+`REPORT.md` are saved under `data/synthetic-risk-<timestamp>/` and excluded from
+Git. `results.json` includes all candidates, baseline comparisons, uncertainty
+intervals, and checks for changed records and missing evidence. Override `--seed`,
+`--rows`, or `--output` to run another experiment; output directories must be new.
+
+This test harness calls the prediction function directly. It does not bypass the
+production CLI's named-review requirement, create student accounts, import model
+predictions, or activate automatic prediction refresh in the application. All
+model manifests remain unvalidated and inactive. Synthetic metrics demonstrate
+pipeline behavior and recovery of invented patterns, **not accuracy on real
+students or suitability for institutional decisions**.
+
+## Real-data training and review
+
 The pipeline supports four independently defined outcomes: `course_failure`, `attendance_shortage`, `assignment_delay`, and `lab_failure`. Features are measured at `observed_at`; the approved outcome is recorded later at `outcome_observed_at`. The loader rejects missing dates, malformed or nonfinite measurements, invalid ranges/counts, and outcomes recorded before the cutoff. Training requires observed base features, both outcomes, and minimum sample counts. Prediction accepts missing measurements and returns `insufficient_evidence` before scoring rows below the reviewed coverage threshold.
 
 Install the optional Python dependencies:

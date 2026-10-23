@@ -47,12 +47,14 @@ def fit_calibrated(estimator, x, y, groups):
     folds = min(3, len(np.unique(groups)))
     if folds < 2:
         return estimator.fit(x, y)
-    try:
-        model = CalibratedClassifierCV(estimator=estimator, method="sigmoid", cv=GroupKFold(n_splits=folds))
-        model.fit(x, y, groups=groups)
-        return model
-    except (TypeError, ValueError):
+    # Materialize group-aware indices: the calibration wrapper does not reliably
+    # forward groups to its splitter. Do not silently swallow unrelated fit errors.
+    splits = list(GroupKFold(n_splits=folds).split(x, y, groups=groups))
+    if any(len(np.unique(y[train])) < 2 or len(np.unique(y[valid])) < 2 for train, valid in splits):
         return estimator.fit(x, y)
+    model = CalibratedClassifierCV(estimator=estimator, method="sigmoid", cv=splits)
+    model.fit(x, y)
+    return model
 
 
 def evaluate_candidates(development, test):
@@ -65,7 +67,7 @@ def evaluate_candidates(development, test):
     for name, estimator in candidates().items():
         fold_metrics, oof_probability = [], np.full(len(y_dev), np.nan)
         for train_index, valid_index in splitter.split(x_dev, y_dev, groups=groups):
-            model = clone(estimator).fit(x_dev.iloc[train_index], y_dev[train_index])
+            model = fit_calibrated(clone(estimator), x_dev.iloc[train_index], y_dev[train_index], groups[train_index])
             probability = model.predict_proba(x_dev.iloc[valid_index])[:, 1]
             oof_probability[valid_index] = probability
             if len(np.unique(y_dev[valid_index])) == 2:

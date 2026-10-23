@@ -11,6 +11,9 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ml'))
 from data import BASE_FEATURES, FEATURES, load_dataset
 from predict import generate_predictions
+from train import fit_calibrated
+from models import candidates
+from synthetic_check import synthetic_students
 
 
 class DatasetTests(unittest.TestCase):
@@ -76,6 +79,25 @@ class DatasetTests(unittest.TestCase):
         rows = [self.row(student_id=f'student-{i}', outcome=i % 2, outcome_observed_at=None) for i in range(100)]
         with self.assertRaisesRegex(ValueError, 'outcome_observed_at'):
             self.load(rows, target='attendance_shortage')
+
+
+class CalibrationTests(unittest.TestCase):
+    def test_calibration_keeps_repeated_students_out_of_opposite_fold(self):
+        frame, outcomes = synthetic_students(120, 42)
+        groups = np.repeat(np.arange(60), 2)
+        model = fit_calibrated(candidates()['logistic_regression'], frame[FEATURES], outcomes['assignment_delay'], groups)
+        self.assertTrue(hasattr(model, 'calibrated_classifiers_'))
+        for train, valid in model.cv:
+            self.assertTrue(set(groups[train]).isdisjoint(groups[valid]))
+        probabilities = model.predict_proba(frame[FEATURES])
+        self.assertTrue(np.isfinite(probabilities).all())
+        self.assertTrue(np.allclose(probabilities.sum(axis=1), 1))
+
+    def test_unrelated_fit_errors_are_not_silently_swallowed(self):
+        frame, outcomes = synthetic_students(120, 42)
+        with patch('train.CalibratedClassifierCV.fit', side_effect=ValueError('broken estimator')):
+            with self.assertRaisesRegex(ValueError, 'broken estimator'):
+                fit_calibrated(candidates()['logistic_regression'], frame[FEATURES], outcomes['assignment_delay'], frame.student_id.to_numpy())
 
 
 if __name__ == '__main__':
