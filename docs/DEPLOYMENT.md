@@ -4,6 +4,10 @@ The current application uses one Express process with SQLite and private disk up
 
 ## Prepare the target
 
+For a Linux Docker host, use the [HTTPS deployment package](../deploy/README.md).
+It includes a non-root app image, persistent volume, private configuration mount,
+health check and Caddy proxy. Public launch still requires host/domain selection.
+
 1. Install the supported Node runtime and dependencies from the lockfile, then run `npm run build`. Run `npm run verify:all` in a test environment with the optional Python dependencies and Playwright Chromium.
 2. Configure a private persistent `FACTX_DATA_DIR` outside the web root. Keep it separate from temporary test workspaces. Preserve the database and upload directory together.
 3. Configure a private `.env`. Use a real random first-run setup token if setting `FACTX_SETUP_TOKEN`; never use the example placeholder. Create the first administrator through the setup screen and retain the normal administrator-managed account process.

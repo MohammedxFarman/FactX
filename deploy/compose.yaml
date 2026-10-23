@@ -1,0 +1,50 @@
+name: factx
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3001
+      COOKIE_SECURE: "true"
+      FACTX_DATA_DIR: /app/data
+      FACTX_ENV_FILE: /run/secrets/factx_environment
+    secrets:
+      - factx_environment
+    volumes:
+      - academic_data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  web:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      FACTX_DOMAIN: ${FACTX_DOMAIN:?Set FACTX_DOMAIN to your institution hostname}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - tls_data:/data
+      - tls_config:/config
+    depends_on:
+      app: {condition: service_healthy}
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+secrets:
+  factx_environment:
+    file: ${FACTX_ENV_PATH:?Set FACTX_ENV_PATH to a private absolute environment-file path}
+volumes:
+  academic_data:
+  tls_data:
+  tls_config:

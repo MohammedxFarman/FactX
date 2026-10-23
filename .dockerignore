@@ -1,0 +1,17 @@
+# Allowlist: private data, credentials, Git history and build output never enter context.
+**
+!Dockerfile
+!package.json
+!package-lock.json
+!index.html
+!vite.config.js
+!src/
+!src/**
+!public/
+!public/**
+public/app-icons/
+!server/
+!server/**
+!scripts/
+!scripts/build-app-icons.mjs
+!scripts/check-integrations.mjs

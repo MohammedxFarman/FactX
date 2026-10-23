@@ -1,9 +1,8 @@
 import { createApp } from './app.js';
-import { existsSync } from 'node:fs';
-import { loadEnvFile } from 'node:process';
+import { loadRuntimeEnvironment } from './runtime-config.js';
 import { startExecutionWorker } from './execution.js';
 import { startWorkflowReminders } from './coordination.js';
-if (existsSync('.env')) loadEnvFile('.env');
+loadRuntimeEnvironment();
 const { app, db, setupToken, sendReminders }=createApp();
 startExecutionWorker(db);
 startWorkflowReminders(sendReminders);

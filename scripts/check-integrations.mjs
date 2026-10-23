@@ -3,7 +3,8 @@ import { loadEnvFile } from 'node:process';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-if (existsSync('.env')) loadEnvFile('.env');
+if (process.env.FACTX_ENV_FILE) loadEnvFile(process.env.FACTX_ENV_FILE);
+else if (existsSync('.env')) loadEnvFile('.env');
 const results = [];
 const report = (name, status, detail) => results.push({ name, status, detail });
 const get = async (base, route, headers = {}) => {
