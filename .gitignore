@@ -17,3 +17,6 @@ playwright-report/
 *.log
 __pycache__/
 *.pyc
+public/app-icons/
+release/
+desktop/node_modules/

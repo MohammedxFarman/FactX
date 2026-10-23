@@ -40,7 +40,7 @@ Remaining infrastructure and product work:
 - Connect and accept real chat/vision and isolated code-execution services. Current integration diagnostics report them missing.
 - Provision disposable hosted web applications, API/Postman environments and ML notebooks for interactive full-stack/ML labs. This release can author their instructions and faculty-reviewed rubrics, but does not host these environments or automatically grade arbitrary websites.
 - Rich course-level prerequisites, embedded video tracking, full course sequencing, direct Office ingestion, and assessments spanning multiple hosted services are future extensions. Existing manual activity authoring APIs retain their previous targeting capabilities; Studio currently publishes to one class per draft.
-- Mobile installation/PWA and Windows `.exe` packaging, shared hosting and production release remain outstanding. The interfaces have been checked on phone and desktop widths; that is not an installed mobile or desktop app.
+- Mobile PWA support and an unsigned Windows portable client are now implemented; see [installation](INSTALLATION.md). Shared HTTPS hosting, real-device acceptance and signed production distribution remain outstanding.
 
 ## Continuity report
 

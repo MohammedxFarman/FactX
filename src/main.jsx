@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import './register-app';
 import { createRoot } from 'react-dom/client';
 import { LayoutDashboard, Users, BookOpen, CalendarDays, ClipboardList, Code2, ChartNoAxesCombined, FolderOpen, MessageSquare, Settings, Bell, Search, ArrowUpRight, ArrowRight, Plus, X, Check, ChevronDown, ChevronRight, Download, LogOut, ShieldCheck, Sparkles, GraduationCap, Building2, FileText, Clock3, Ellipsis, Menu, LoaderCircle, AlertCircle, CheckCircle2, Send, Upload, Play, CircleHelp, Layers3, ListChecks, Mail, LockKeyhole, Eye, EyeOff, SlidersHorizontal, ExternalLink, Activity } from 'lucide-react';
 import './styles.css';
@@ -13,7 +14,7 @@ import { ShellTools } from './ui/ShellTools';
 import { ErrorBoundary, Skeleton, PageMotion, Sheet } from './ui/Primitives';
 import { TimetableAssistant } from './TimetableAssistant.jsx';
 import { Attachments } from './Attachments.jsx';
-import { HodOverview, HOD_LABELS, HOD_GROUPS } from './HodOverview.jsx';
+import { HodOverview, HOD_LABELS } from './HodOverview.jsx';
 import { LeaveWorkflow, SubstitutionSchedule } from './LeaveWorkflow.jsx';
 import { SyllabusProgress, AcademicMonitoring } from './AcademicMonitoring.jsx';
 import { WorkflowInbox, SupportPlans } from './Coordination.jsx';
@@ -89,10 +90,10 @@ function App(){const [user,setUser]=useState(undefined),[page,setPage]=useState(
   if(user===undefined)return <div className="boot"><span className="brand-mark">f<span>×</span></span><div className="fx-skeleton" style={{width:180,height:12}}/><p>Opening your workspace</p></div>;
   if(!user)return <Landing><Auth onLogin={setUser}/></Landing>;
   const isStudent=user.role==='STUDENT',isAdmin=user.role==='ADMIN',isHod=user.role==='HOD',isManager=['ADMIN','HOD'].includes(user.role);
-  const oldNavigation=isHod?HOD_GROUPS.map(group=>({group:group.group,items:group.ids.map(id=>{const item=NAV.flatMap(section=>section.items).find(item=>item[0]===id);return [id,HOD_LABELS[id]||item[1],item[2]]})})):NAV;
   const primaryIds=['overview','learning','assessments','timetable','inbox'].filter(id=>!(isHod&&id==='labs'));
   const allItems=NAV.flatMap(g=>g.items);
-  const navigation=[{group:'YOUR WORKSPACE',items:primaryIds.map(id=>allItems.find(i=>i[0]===id))},...oldNavigation.map(g=>({...g,items:g.items.filter(i=>!primaryIds.includes(i[0]))}))];
+  const sectionIds=[['LEARNING',['academics','knowledge','syllabus']],['ASSESSMENTS',['labs']],['RESULTS & SUPPORT',['grades','reports','analytics','support','feedback']],['SCHEDULE',['attendance','leave','substitutions']],['ADMINISTRATION',['students','documents','monitoring','users','announcements','workload','configuration','audit','settings']]];
+  const navigation=[{group:'YOUR WORKSPACE',items:primaryIds.map(id=>allItems.find(i=>i[0]===id)).filter(Boolean)},...sectionIds.map(([group,ids])=>({group,items:ids.map(id=>allItems.find(i=>i[0]===id)).filter(Boolean)}))];
   const pageTitles=isHod?{...titles,...HOD_LABELS}:{...titles,...(user.role==='FACULTY'?{leave:'Leave & student approvals',substitutions:'Substitution duties',monitoring:'My teaching analysis'}:isStudent?{substitutions:'Class changes',support:'My support plans'}:{})};
   const hodDescriptions={overview:'Your department, its priorities, and the decisions that need you.',academics:'Review classes and coordinate faculty teaching assignments.',attendance:'Review attendance recorded by your department faculty.',assessments:'Monitor assignments, quizzes, and lab submissions published by faculty.',grades:'Review official results and semester progress.',reports:'Review and export your department’s academic records.',leave:'Review faculty leave, arrange teaching cover, and review student requests.'};
   const visible=id=>!(isStudent&&['students','users','audit','settings','configuration','workload','syllabus','monitoring'].includes(id))&&!(user.role==='FACULTY'&&['users','audit','settings','workload'].includes(id))&&!(user.role==='HOD'&&['audit','settings','labs','learning'].includes(id));

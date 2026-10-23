@@ -4,6 +4,8 @@ A responsive, database-backed academic workspace with Admin, HOD, Faculty, and S
 
 ## Run locally
 
+Phone installation and the Windows portable client: [installation guide](docs/INSTALLATION.md).
+
 Requires Node.js 22.16 or later and npm. SQLite is built into Node; no separate database installation is needed for local use. Node 22 currently labels its SQLite API experimental.
 
 ```powershell

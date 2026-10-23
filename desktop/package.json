@@ -1,0 +1,36 @@
+{
+  "name": "factx-desktop",
+  "version": "1.0.0",
+  "description": "FactX institution workspace desktop client",
+  "author": "FactX",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-builder --win zip --x64"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "org.factx.desktop",
+    "productName": "FactX",
+    "directories": {
+      "output": "../release"
+    },
+    "files": [
+      "main.cjs",
+      "policy.cjs",
+      "preload.cjs",
+      "setup.html",
+      "setup.js",
+      "setup.css"
+    ],
+    "win": {
+      "target": "zip",
+      "signAndEditExecutable": false
+    },
+    "artifactName": "FactX-${version}-Windows-${arch}.${ext}"
+  }
+}
