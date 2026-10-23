@@ -1,0 +1,112 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {chromium} from '@playwright/test';
+import {deviceTestWorkspace} from '../scripts/device-test-workspace.mjs';
+import {chromiumPath} from './ui-fixture.mjs';
+
+const directory=mkdtempSync(path.join(tmpdir(),'factx-device-check-'));
+const previousCookie=process.env.COOKIE_SECURE;
+process.env.COOKIE_SECURE='false';
+let workspace,server,browser;
+const errors=[];
+try{
+  workspace=await deviceTestWorkspace(directory);
+  server=await new Promise(resolve=>{const s=workspace.app.listen(0,'127.0.0.1',()=>resolve(s));});
+  const base=`http://127.0.0.1:${server.address().port}`;
+  const {manifest}=workspace;
+  browser=await chromium.launch({headless:true,executablePath:chromiumPath()});
+  const login=async(account,width=390)=>{
+    const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});
+    const page=await context.newPage();page.setDefaultTimeout(20000);
+    page.on('pageerror',e=>errors.push(e.message));
+    page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+    await page.goto(base);
+    await page.getByLabel('Institutional email').fill(account.email);
+    await page.getByLabel('Password',{exact:true}).fill(account.password);
+    await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();
+    await page.getByRole('heading',{name:/Good (morning|afternoon|evening), Device/}).waitFor();
+    return {page,context,account};
+  };
+  const students=await Promise.all(manifest.accounts.filter(a=>a.role==='STUDENT').map((a,i)=>login(a,[390,768,1440,360,414][i])));
+  const correct=['HTTPS','SELECT','Queue','5','Student'];
+  await Promise.all(students.map(async({page,context,account},i)=>{
+    assert.equal((await (await context.request.get(base+'/api/auth/me')).json()).id,account.id);
+    await page.evaluate(()=>{location.hash='assessments';});
+    await page.getByRole('button',{name:'Open Device Test - Computing Quiz',exact:true}).click();
+    let dialog=page.getByRole('dialog',{name:'Device Test - Computing Quiz'});
+    await dialog.getByRole('button',{name:'Begin quiz',exact:true}).click();
+    for(const answer of correct)await dialog.getByRole('radio',{name:i===4&&answer==='HTTPS'?'HTTP':answer,exact:true}).check();
+    await dialog.getByText('Saved',{exact:true}).waitFor();
+    await dialog.getByRole('button',{name:'Submit assessment',exact:true}).click();
+    await dialog.getByText(new RegExp(`Submission received.*Score: ${i===4?8:10}/10`)).waitFor();
+    await dialog.getByRole('button',{name:'Close dialog',exact:true}).click();
+    await page.getByRole('button',{name:'Open Device Test - Written Assignment',exact:true}).click();
+    dialog=page.getByRole('dialog',{name:'Device Test - Written Assignment'});
+    await dialog.getByRole('button',{name:'Begin assignment',exact:true}).click();
+    await dialog.getByLabel('Response to task 1').fill(`${account.name}: a database stores structured records.`);
+    await dialog.getByLabel('Response to task 2').fill(`${account.name}: isolated browser viewport ${page.viewportSize().width}.`);
+    await dialog.getByText('Saved',{exact:true}).waitFor();
+    await page.reload();
+    await page.getByRole('button',{name:'Open Device Test - Written Assignment',exact:true}).click();
+    dialog=page.getByRole('dialog',{name:'Device Test - Written Assignment'});
+    await dialog.getByText('Saved work restored',{exact:true}).waitFor();
+    assert.equal(await dialog.getByLabel('Response to task 1').inputValue(),`${account.name}: a database stores structured records.`);
+    await dialog.getByRole('button',{name:'Submit assessment',exact:true}).click();
+    await dialog.getByText(/Submission received.*Awaiting faculty evaluation/).waitFor();
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await dialog.getByRole('button',{name:'Close dialog',exact:true}).click();
+  }));
+  const teacher=await login(manifest.accounts.find(a=>a.role==='FACULTY'),1440);
+  await teacher.page.evaluate(()=>{location.hash='assessments';});
+  await teacher.page.getByRole('button',{name:'Open Device Test - Written Assignment',exact:true}).click();
+  const review=teacher.page.getByRole('dialog',{name:'Device Test - Written Assignment'});
+  for(const [i,student] of students.entries()){
+    await review.getByRole('button',{name:new RegExp(student.account.name)}).click();
+    await review.locator('input[type=number]').nth(0).fill(String(3+i%3));
+    await review.locator('input[type=number]').nth(1).fill('4');
+    await review.getByLabel('Feedback / reason for changes').fill(`Reviewed ${student.account.name}.`);
+    await review.getByRole('button',{name:'Save task marks',exact:true}).click();
+    await review.getByRole('button',{name:new RegExp(`${student.account.name}.*evaluated`)}).waitFor();
+  }
+  await Promise.all(students.map(async({page,context,account},i)=>{
+    const response=await context.request.get(`${base}/api/activities/${manifest.activities.assignment}/submissions`);
+    const submissions=await response.json();
+    assert.equal(submissions.length,1);assert.equal(submissions[0].student_id,account.id);assert.equal(submissions[0].score,7+i%3);
+    const other=students[(i+1)%students.length].account;
+    assert.equal((await context.request.get(`${base}/api/students/${other.id}/report`)).status(),404);
+    await page.getByRole('button',{name:'Open Device Test - Written Assignment',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Device Test - Written Assignment'});
+    await dialog.getByRole('button',{name:/Attempt 1.*evaluated/}).click();
+    await dialog.getByText(`Feedback: Reviewed ${account.name}.`,{exact:true}).waitFor();
+    await dialog.getByRole('button',{name:'Close dialog',exact:true}).click();
+    await page.evaluate(()=>{location.hash='learning';});
+    await page.getByRole('button',{name:'Preview Device Test - Learning Module',exact:true}).click();
+    const learning=page.getByRole('dialog',{name:'Device Test - Learning Module'});
+    await learning.getByRole('button',{name:'Complete lesson and continue',exact:true}).click();
+    await learning.getByText('1 of 2 lessons completed',{exact:true}).waitFor();
+    await learning.getByRole('button',{name:'Complete lesson and continue',exact:true}).click();
+    await learning.getByText('2 of 2 lessons completed',{exact:true}).waitFor();
+  }));
+  for(const role of ['ADMIN','HOD']){const account=await login(manifest.accounts.find(a=>a.role===role),1440);await account.context.close();}
+  mkdirSync('test-results',{recursive:true});
+  await students[0].page.screenshot({path:'test-results/device-test-mobile.png'});
+  assert.deepEqual(errors,[]);
+  await browser.close();browser=null;
+  await new Promise(resolve=>server.close(resolve));server=null;
+  workspace.db.close();workspace=null;
+  workspace=await deviceTestWorkspace(directory);
+  assert.equal(workspace.db.prepare('SELECT COUNT(*) n FROM submissions').get().n,10);
+  assert.equal(workspace.db.prepare('SELECT COUNT(*) n FROM lesson_progress').get().n,10);
+  assert.equal(workspace.db.prepare('SELECT COUNT(*) n FROM users').get().n,8);
+  console.log('PASS: five concurrent isolated student sessions, quiz grading, saved assignment restoration, faculty grading, private results, lessons, staff login and persistence. No browser errors.');
+}finally{
+  await browser?.close();
+  if(server)await new Promise(resolve=>server.close(resolve));
+  workspace?.db.close();
+  if(previousCookie===undefined)delete process.env.COOKIE_SECURE;else process.env.COOKIE_SECURE=previousCookie;
+  const resolved=path.resolve(directory);
+  if(!resolved.startsWith(path.resolve(tmpdir())+path.sep)||!path.basename(resolved).startsWith('factx-device-check-'))throw new Error('Unexpected test directory');
+  rmSync(resolved,{recursive:true,force:true});
+}
