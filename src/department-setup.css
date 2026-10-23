@@ -1,0 +1,5 @@
+.department-setup{padding:24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.department-setup h2{margin:0 0 8px;font-size:20px}
+.department-setup p{margin:0;max-width:650px;line-height:1.6}
+.department-setup .inline-actions{margin:0;flex-wrap:wrap}
+@media(max-width:600px){.department-setup{padding:18px}.department-setup .inline-actions{width:100%}.department-setup .button{white-space:normal}}

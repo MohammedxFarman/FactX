@@ -30,6 +30,14 @@ try {
   await page.getByRole('button', { name: 'Create your workspace' }).click();
   await page.getByRole('heading', { name: /Good .*Workspace/ }).waitFor();
   await page.getByText('Database connected', { exact: false }).first().waitFor();
+  assert.equal(await page.locator('aside.sidebar').getByRole('button',{name:'Academics',exact:true}).isVisible(),true,'Administrator must see Academics without expanding a group');
+  await page.getByRole('button',{name:'Add department',exact:true}).waitFor();
+  await page.setViewportSize({width:390,height:844});
+  await page.getByRole('button',{name:'Add department',exact:true}).click();
+  await page.getByRole('dialog',{name:'Create a department',exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'Department setup must fit a phone');
+  await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+  await page.setViewportSize({width:1440,height:1100});
   await page.screenshot({ path: 'test-results/dashboard-desktop.png', fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'Desktop must not overflow');
   const workspaceTrigger = page.locator('.workspace-chip');
@@ -58,7 +66,10 @@ try {
   await workspaceMenu.getByRole('menuitem', { name:/Administrator portal/ }).click();
   await page.getByRole('heading', { name:/Good .*Workspace/ }).waitFor();
   await clickNavigation(page,'Academics');
-  await page.getByRole('button', { name: 'Department', exact: true }).click();
+  await clickNavigation(page,'Academic setup');
+  await page.getByRole('button',{name:'Manage departments and classes',exact:true}).click();
+  await page.getByRole('heading',{name:'Academics',exact:true}).waitFor();
+  await page.getByRole('button', { name: 'Add department', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('UI Test Department');
   await page.getByLabel('Code', { exact: true }).fill('UITEST');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
