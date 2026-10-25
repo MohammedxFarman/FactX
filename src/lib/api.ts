@@ -1,4 +1,5 @@
 import type { Api } from './types';
+import {readApiResponse} from './response';
 const cache=new Map<string,{at:number;value:unknown}>();
 const pending=new Map<string,Promise<unknown>>();
 let generation=0;
@@ -16,8 +17,7 @@ export const api:Api=async<T,>(url:string,options:Parameters<Api>[1]={}):Promise
   const requestGeneration=generation;
   const request=(async()=>{
     const response=await fetch('/api'+url,{credentials:'same-origin',method,signal:options.signal,headers:options.body instanceof FormData?{}:{'Content-Type':'application/json'},body:options.body instanceof FormData?options.body:options.body?JSON.stringify(options.body):undefined});
-    const data=await response.json();
-    if(!response.ok)throw Object.assign(new Error(data.error||'Unable to load this information.'),{status:response.status,details:data});
+    const data=await readApiResponse(response);
     if(cacheable&&requestGeneration===generation)cache.set(url,{at:Date.now(),value:data});
     return data as T;
   })();

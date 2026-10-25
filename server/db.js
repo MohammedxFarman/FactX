@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
+import {migrateAcademics} from './academic-schema.js';
 
 export function openDatabase(dir) {
   mkdirSync(dir, { recursive: true });
@@ -31,5 +32,6 @@ export function openDatabase(dir) {
     CREATE INDEX IF NOT EXISTS idx_activities_class ON activities(class_id);
     CREATE INDEX IF NOT EXISTS idx_submissions_student ON submissions(student_id);
   `);
+  migrateAcademics(db);
   return db;
 }

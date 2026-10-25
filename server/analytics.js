@@ -1,6 +1,14 @@
 import { scopes } from './security.js';
 import { studentRisk } from './risk-models.js';
 import { featureSnapshot } from './risk-features.js';
+export function analyticsCandidates(db,students){
+  // Empty synthetic cohorts have no support signals. Avoid thousands of detailed
+  // risk/feature queries when only a few students have recorded academic data.
+  if(db.prepare('SELECT 1 FROM activities LIMIT 1').get()||db.prepare('SELECT 1 FROM risk_predictions LIMIT 1').get()||db.prepare('SELECT 1 FROM model_versions WHERE active=1 LIMIT 1').get())return students;
+  const ids=new Set(db.prepare('SELECT student_id FROM attendance UNION SELECT student_id FROM marks').all().map(r=>r.student_id));
+  return students.filter(s=>ids.has(s.id));
+}
+
 export function studentAnalytics(db, studentId) {
   const attendance = db.prepare('SELECT * FROM attendance WHERE student_id=? ORDER BY date').all(studentId);
   const marks = db.prepare('SELECT m.*,s.name subject_name FROM marks m JOIN subjects s ON s.id=m.subject_id WHERE student_id=? ORDER BY created_at').all(studentId);

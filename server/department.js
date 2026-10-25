@@ -1,4 +1,4 @@
-import { studentAnalytics } from './analytics.js';
+import { studentAnalytics,analyticsCandidates } from './analytics.js';
 import { syllabusAssignments } from './monitoring.js';
 
 export function registerDepartmentOverview({ app, db, roles }) {
@@ -16,7 +16,7 @@ export function registerDepartmentOverview({ app, db, roles }) {
     const leaves = db.prepare("SELECT l.id,l.student_id,u.name student_name,u.name applicant_name,u.role applicant_role,u.roll_number,l.start_date,l.end_date,l.reason,l.created_at FROM leave_applications l JOIN users u ON u.id=l.student_id WHERE l.status='pending' AND u.department_id=? ORDER BY u.role='FACULTY' DESC,l.created_at").all(req.user.department_id);
     const syllabus=syllabusAssignments(db,req.user);
     const plannedHours=syllabus.reduce((sum,course)=>sum+course.totalHours,0),completedHours=syllabus.reduce((sum,course)=>sum+course.completedHours,0);
-    const support = students.map(student => ({ ...student, analytics:studentAnalytics(db,student.id) })).filter(student => student.analytics.suggestions.length);
+    const support = analyticsCandidates(db,students).map(student => ({ ...student, analytics:studentAnalytics(db,student.id) })).filter(student => student.analytics.suggestions.length);
     const percentage = rows => rows.length ? Math.round(rows.filter(row => row.status==='present').length / rows.length * 100) : null;
     const average = rows => rows.length ? Math.round(rows.reduce((sum,row) => sum + row.score / row.max_marks * 100,0) / rows.length) : null;
     const classOverview = classes.map(classroom => ({

@@ -107,6 +107,7 @@ try{
   workspace?.db.close();
   if(previousCookie===undefined)delete process.env.COOKIE_SECURE;else process.env.COOKIE_SECURE=previousCookie;
   const resolved=path.resolve(directory);
-  if(!resolved.startsWith(path.resolve(tmpdir())+path.sep)||!path.basename(resolved).startsWith('factx-device-check-'))throw new Error('Unexpected test directory');
-  rmSync(resolved,{recursive:true,force:true});
+  if(!resolved.startsWith(path.resolve(tmpdir())+path.sep)||!path.basename(resolved).startsWith('factx-device-check-')){
+    console.error('Unexpected test directory; cleanup skipped.');process.exitCode=1;
+  }else rmSync(resolved,{recursive:true,force:true});
 }
