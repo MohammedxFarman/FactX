@@ -93,7 +93,7 @@ try {
   const breadcrumbPages = [
     ['Students','students'], ['Academics','catalog'], ['Attendance','attendance'], ['Timetable','timetable'],
     ['Assessments','activities'], ['Labs','activities'], ['Analytics / Growth','dashboard'],
-    ['Study Materials','activities'], ['Reports','students'], ['Grades & semesters','grades'],
+    ['Study Materials','activities'], ['Reports','students'], ['Marks & results','grades'],
     ['Documents','documents'], ['Feedback','feedback'], ['Leave requests','leave'], ['People & access','users'],
     ['Announcements','announcements'], ['Knowledge library','knowledge'], ['Faculty workload','faculty-workload'],
     ['Academic setup','academic-reference'], ['Audit trail','audit'], ['Settings','system'],
@@ -107,7 +107,7 @@ try {
     assert.equal(await breadcrumb.getByRole('button').count(), 0, 'Dashboard breadcrumb must be inactive');
   }
   assert.equal(documentRequests, 0, 'Breadcrumbs and sidebar must navigate without document reloads');
-  for (const name of ['Timetable', 'Grades & semesters', 'Knowledge library', 'Faculty workload', 'Academic setup', 'Settings']) {
+  for (const name of ['Timetable', 'Marks & results', 'Knowledge library', 'Faculty workload', 'Academic setup', 'Settings']) {
     await clickNavigation(page,name);
     await page.getByRole('heading', { name, exact: true }).waitFor();
     await page.locator('.panel, .timetable-grid').first().waitFor();

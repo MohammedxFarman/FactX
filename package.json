@@ -9,7 +9,7 @@
     "build": "node scripts/build-app-icons.mjs && vite build",
     "start": "node server/index.js",
     "test": "node --test tests/*.test.js",
-    "test:browser": "node tests/browser-smoke.mjs && node tests/workflow-browser.mjs && node tests/timetable-browser.mjs && node tests/studio-browser.mjs",
+    "test:browser": "node tests/browser-smoke.mjs && node tests/workflow-browser.mjs && node tests/timetable-browser.mjs && node tests/studio-browser.mjs && node tests/results-browser.mjs",
     "test:ml": "python -m unittest discover -s tests -p test_ml_pipeline.py",
     "doctor": "node scripts/check-integrations.mjs",
     "verify": "npm test && npm run build && npm run test:browser",

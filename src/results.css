@@ -1,0 +1,6 @@
+.results-page { display: grid; gap: 20px; min-width: 0; }
+.results-page > .panel { padding: 20px; min-width: 0; }
+.results-page > .panel h3 { margin-top: 0; }
+.results-page > .panel p:last-child { margin-bottom: 0; }
+.results-page > .extension-heading { flex-wrap: wrap; gap: 12px; }
+.results-page > .stats-grid { margin: 0; }

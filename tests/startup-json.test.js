@@ -16,6 +16,9 @@ test('empty proxy failure reproduces JSON error and provides actionable error',a
  await assert.rejects(readApiResponse(new Response('<html>Gateway error</html>',{status:502})),/API server is unavailable/);
  await assert.rejects(readApiResponse(new Response('{bad',{status:200})),/invalid JSON/);
  assert.deepEqual(await readApiResponse(Response.json({students:0})),{students:0});
+ assert.equal(await readApiResponse(Response.json(null)),null,'An unstarted assessment has no session yet');
+ await assert.rejects(readApiResponse(new Response('',{status:200})),/empty response/);
+ assert.equal(await readApiResponse(new Response(null,{status:204})),null);
 });
 test('Vite returns JSON 503 when the API connection is refused',async()=>{
  const temporary=await listen(express(),{port:0}),port=temporary.address().port;await new Promise(r=>temporary.close(r));
