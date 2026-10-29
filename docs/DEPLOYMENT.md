@@ -34,4 +34,16 @@ If optional integrations are intentionally omitted, record that choice and use t
 - Restore the backup to an isolated instance and verify both academic records and private attachments before relying on the backup process. Do not use production records in public demos.
 - Record the deployed Git commit, runtime version, environment owner, backup/restore result, and integration acceptance results. Retain a tested prior release and consistent data backup for recovery.
 
+Configure `FACTX_BACKUP_DIR` outside `FACTX_DATA_DIR` in protected storage. Scheduled backups run every `BACKUP_INTERVAL_HOURS` (24 by default); administrators can also create a backup in Settings. The single-process application takes a SQLite snapshot and copies uploads synchronously, verifies file hashes and database integrity, and then publishes the backup directory. Backups contain private records and must remain out of Git. Retention and off-host copies are managed by the operator.
+
+For an offline backup, stop the application first. Restore only to a new directory:
+
+```powershell
+npm run backup -- create --offline
+npm run backup -- verify PATH_TO_BACKUP
+npm run backup -- restore PATH_TO_BACKUP NEW_PRIVATE_DIRECTORY
+```
+
+Set `SMTP_HOST`, `MAIL_FROM` and the actual application origin in `PUBLIC_URL` before testing recovery emails. Configure matching SMTP credentials if the relay requires them. Verify delivery, single-use reset links and email confirmation before setting `REQUIRE_EMAIL_VERIFICATION=true`. Production requires an HTTPS public origin. Local tests capture mail and do not prove actual SMTP delivery.
+
 Local automated checks cover application behavior. TLS, host permissions, sandbox isolation, real model quality, operational recovery, and institutional policy need verification on the selected deployment.

@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import {emailConfiguration} from '../server/runtime-config.js';
 
 if (process.env.FACTX_ENV_FILE) loadEnvFile(process.env.FACTX_ENV_FILE);
 else if (existsSync('.env')) loadEnvFile('.env');
@@ -21,6 +22,12 @@ const get = async (base, route, headers = {}) => {
 
 report('Frontend', existsSync('dist/index.html') ? 'READY' : 'MISSING',
   existsSync('dist/index.html') ? 'Production bundle exists; npm run build refreshes it.' : 'Run npm run build.');
+const email=emailConfiguration(process.env);
+report('Account email',email.error?'ERROR':email.configured?'READY':'MISSING',email.error|| (email.configured?'SMTP configuration is complete. Verify actual delivery and reset links before enabling mandatory verification.':'Set SMTP_HOST, SMTP_PORT, MAIL_FROM and PUBLIC_URL; authenticated SMTP also needs SMTP_USER and SMTP_PASSWORD. Administrator resets and signed-in password changes remain available.'));
+const backup=process.env.FACTX_BACKUP_DIR;
+const relative=backup?path.relative(path.resolve(process.env.FACTX_DATA_DIR||'data'),path.resolve(backup)):'';
+const outside=relative&&(relative==='..'||relative.startsWith('..'+path.sep)||path.isAbsolute(relative));
+report('Backups',!backup?'MISSING':outside?'READY':'ERROR',!backup?'Set FACTX_BACKUP_DIR outside runtime data, then create and restore a backup.':outside?'Private backup path is configured. Verify a fresh backup and restore before deployment.':'FACTX_BACKUP_DIR must be outside FACTX_DATA_DIR.');
 
 let installedModels;
 async function checkModels(name, keys, readyDetail) {

@@ -1,10 +1,21 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {validateRuntimeEnvironment} from '../server/runtime-config.js';
+import {emailConfiguration} from '../server/runtime-config.js';
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
+
+test('email configuration rejects partial credentials, invalid ports and unsafe reset origins',()=>{
+ const base={SMTP_HOST:'smtp.test.invalid',MAIL_FROM:'test@test.invalid',PUBLIC_URL:'https://school.test',SMTP_PORT:'587'};
+ assert.equal(emailConfiguration(base).configured,true);
+ for(const patch of [{SMTP_HOST:''},{SMTP_PORT:'oops'},{SMTP_PORT:'0'},{SMTP_USER:'sender'},{SMTP_PASSWORD:'private-secret'},{PUBLIC_URL:'https://user:private-secret@school.test'},{PUBLIC_URL:'https://school.test/path'},{NODE_ENV:'production',PUBLIC_URL:'http://school.test'}]){
+  const result=emailConfiguration({...base,...patch});assert.equal(result.configured,false);assert.ok(result.error);assert.ok(!result.error.includes('private-secret'));
+ }
+ assert.throws(()=>validateRuntimeEnvironment({REQUIRE_EMAIL_VERIFICATION:'true'}),/REQUIRE_EMAIL_VERIFICATION/);
+ assert.throws(()=>validateRuntimeEnvironment({FACTX_BACKUP_DIR:'backups',BACKUP_INTERVAL_HOURS:'0'}),/BACKUP_INTERVAL/);
+});
 test('production config rejects insecure cookies and placeholder services without exposing secrets',()=>{
  assert.doesNotThrow(()=>validateRuntimeEnvironment({}));
  const base={NODE_ENV:'production',COOKIE_SECURE:'true'};

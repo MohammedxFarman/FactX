@@ -1,8 +1,10 @@
 ﻿import React,{Component,useEffect,useRef,useState,type ReactNode,type CSSProperties} from 'react';
 import {X,ArrowUpRight,RefreshCw} from 'lucide-react';
 import {subjectColor} from '../lib/subjects';
+import {track} from '../lib/telemetry';
 export class ErrorBoundary extends Component<{children:ReactNode;name?:string},{error:boolean}>{
   state={error:false};static getDerivedStateFromError(){return {error:true};}
+  componentDidCatch(){track({type:'error',kind:'render'});}
   render(){return this.state.error?<div className="fx-empty" role="alert"><h3>Something interrupted {this.props.name||'this view'}.</h3><p>Your saved work is still available.</p><button className="button outline" onClick={()=>this.setState({error:false})}><RefreshCw size={16}/> Try again</button></div>:this.props.children;}
 }
 export function Skeleton(){return <div className="fx-skeleton-page" aria-busy="true" aria-label="Loading section"><div className="fx-summary">{[0,1,2].map(n=><div className="fx-skeleton" key={n}/>)}</div><div className="fx-skeleton fx-skeleton-large"/></div>;}

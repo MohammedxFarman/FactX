@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ml'))
 from data import BASE_FEATURES, FEATURES, load_dataset
 from predict import generate_predictions
-from train import fit_calibrated
+from train import fit_calibrated, split_temporal_cohorts
 from models import candidates
 from synthetic_check import synthetic_students
 
@@ -79,6 +79,32 @@ class DatasetTests(unittest.TestCase):
         rows = [self.row(student_id=f'student-{i}', outcome=i % 2, outcome_observed_at=None) for i in range(100)]
         with self.assertRaisesRegex(ValueError, 'outcome_observed_at'):
             self.load(rows, target='attendance_shortage')
+
+
+class TemporalHoldoutTests(unittest.TestCase):
+    def frame(self):
+        frame, _ = synthetic_students(120, 42)
+        frame['outcome'] = np.arange(len(frame)) % 2
+        frame['outcome_observed_at'] = frame.observed_at + pd.Timedelta(days=30)
+        return frame
+
+    def test_future_cohort_keeps_students_and_outcome_windows_separate(self):
+        development, holdout, _ = split_temporal_cohorts(self.frame())
+        self.assertEqual((len(development), len(holdout)), (96, 24))
+        self.assertTrue(set(development.student_id).isdisjoint(holdout.student_id))
+        self.assertLess(development.outcome_observed_at.max(), holdout.observed_at.min())
+
+    def test_student_repeated_across_temporal_cutoff_is_rejected(self):
+        frame = self.frame()
+        frame.loc[119, 'student_id'] = frame.loc[0, 'student_id']
+        with self.assertRaisesRegex(ValueError, 'different students'):
+            split_temporal_cohorts(frame)
+
+    def test_development_labels_unavailable_at_holdout_start_are_rejected(self):
+        frame = self.frame()
+        frame.loc[95, 'outcome_observed_at'] = frame.loc[96, 'observed_at']
+        with self.assertRaisesRegex(ValueError, 'outcome-maturation gap'):
+            split_temporal_cohorts(frame)
 
 
 class CalibrationTests(unittest.TestCase):

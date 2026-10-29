@@ -1,0 +1,52 @@
+﻿import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+import {fixture} from './ui-fixture.mjs';
+import {createBackup,verifyBackup,restoreBackup} from '../server/backups.js';
+
+test('account recovery, verification, deletion, monitoring, bulk corrections and restore',async()=>{
+ const mail=[],f=await fixture({sendMail:async message=>mail.push(message)});
+ const call=async(route,body,cookie=f.admin,method=body?'POST':'GET',extra={})=>{const r=await fetch(f.base+'/api'+route,{method,headers:{'Content-Type':'application/json',Cookie:cookie,...extra},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};};
+ try{
+  let student=(await f.request('/auth/login',{email:'student@redesign.invalid',password:f.password})).cookie;
+  assert.equal((await call('/account/send-verification',{},student)).status,200);
+  const token=()=>new URL(mail.at(-1).text.match(/http[^\s]+/)[0]).hash.split('token=')[1];
+  const verification=token();assert.equal((await call('/auth/verify-email',{token:verification},'')).status,200);
+  assert.equal((await call('/auth/verify-email',{token:verification},'')).status,400);
+  assert.ok((await call('/account',null,student)).data.verified_at);
+  assert.equal((await call('/account/onboarding',{completed:true},student)).status,200);
+  assert.ok((await call('/account',null,student)).data.onboarded_at);
+  assert.equal((await call('/auth/forgot-password',{email:'STUDENT@redesign.invalid'},'')).status,200);
+  const reset=token(),password='Synthetic-new-password-884';
+  assert.equal((await call('/auth/reset-password',{token:reset,password},'')).status,200);
+  assert.equal((await call('/account',null,student)).status,401);
+  assert.equal((await call('/auth/reset-password',{token:reset,password},'')).status,400);
+  student=(await f.request('/auth/login',{email:'student@redesign.invalid',password})).cookie;
+  assert.equal((await call('/operations',null,student)).status,403);
+  await call('/telemetry',{type:'page',page:'grades'},student);
+  assert.ok((await call('/operations')).data.usage.some(v=>v.page==='grades'));
+  const mark={student_id:f.student.id,subject_id:f.subject.id,title:'Bulk test',kind:'mid_term',semester:3,score:18,max_marks:20};
+  const count=()=>f.db.prepare('SELECT COUNT(*) n FROM marks').get().n;
+  const before=count();assert.equal((await call('/marks/bulk',{records:[mark,{...mark,score:21}]})).status,400);assert.equal(count(),before);
+  assert.equal((await call('/marks/bulk',{records:[mark]},student)).status,403);
+  const key={'Idempotency-Key':'synthetic_bulk_marks_001'};
+  const bulk=await call('/marks/bulk',{records:[mark]},f.admin,'POST',key);assert.equal(bulk.status,201);
+  assert.equal((await call('/marks/bulk',{records:[mark]},f.admin,'POST',key)).headers.get('Idempotency-Replayed'),'true');assert.equal(count(),before+1);
+  const {student_id,subject_id,...correction}=mark;void student_id;void subject_id;
+  assert.equal((await call('/marks/'+bulk.data.ids[0],{...correction,score:19},f.admin,'PATCH')).status,200);
+  assert.equal((await call('/marks/'+bulk.data.ids[0],correction,student,'PATCH')).status,403);
+  const backupRoot=mkdtempSync(path.join(tmpdir(),'factx-backup-test-'));
+  mkdirSync(path.join(f.directory,'uploads'),{recursive:true});writeFileSync(path.join(f.directory,'uploads','synthetic.txt'),'synthetic attachment');
+  const backup=createBackup(f.db,f.directory,backupRoot),source=path.join(backupRoot,backup.name);
+  verifyBackup(source);const restored=restoreBackup(source,path.join(backupRoot,'restored'));
+  const copy=new DatabaseSync(path.join(restored,'factx.sqlite'));assert.equal(copy.prepare('SELECT COUNT(*) n FROM marks').get().n,count());copy.close();
+  assert.equal(readFileSync(path.join(restored,'uploads','synthetic.txt'),'utf8'),'synthetic attachment');
+  writeFileSync(path.join(source,'uploads','synthetic.txt'),'tampered');assert.throws(()=>verifyBackup(source),/integrity/);
+  assert.equal((await call('/account',{password:f.password,confirmation:'DELETE'},f.admin,'DELETE')).status,409);
+  assert.equal((await call('/account',{password,confirmation:'DELETE'},student,'DELETE')).status,200);
+  assert.equal((await call('/account',null,student)).status,401);assert.equal(count(),before+1,'academic marks retained');
+ }finally{await f.close();}
+});

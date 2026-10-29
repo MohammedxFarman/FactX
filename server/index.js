@@ -1,12 +1,15 @@
 import { createApp } from './app.js';
-import { listen } from './listen.js';
 import { loadRuntimeEnvironment } from './runtime-config.js';
 import { startExecutionWorker } from './execution.js';
 import { startWorkflowReminders } from './coordination.js';
+import {startBackups} from './backups.js';
+import path from 'node:path';
+import { listen } from './listen.js';
 loadRuntimeEnvironment();
 const { app, db, setupToken, sendReminders }=createApp();
 startExecutionWorker(db);
 startWorkflowReminders(sendReminders);
+startBackups(db,path.resolve(process.env.FACTX_DATA_DIR||'data'));
 const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT)||3001;
 try {
   await listen(app,{host,port});

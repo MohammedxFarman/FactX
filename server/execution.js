@@ -10,7 +10,7 @@ export function startExecutionWorker(db) {
   let running = false, stopped = false;
   const headers = { 'Content-Type': 'application/json', ...(process.env.JUDGE_TOKEN ? { 'X-Auth-Token': process.env.JUDGE_TOKEN } : {}) };
   async function remote(route, options = {}) {
-    const response = await fetch(base + route, { ...options, headers, signal: AbortSignal.timeout(15000) });
+    const response = await fetch(base + route, { ...options, headers, redirect: 'error', signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`Sandbox request failed (${response.status})`);
     return response.json();
   }

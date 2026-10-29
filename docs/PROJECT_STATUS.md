@@ -1,5 +1,15 @@
 # FactX verification report
 
+## Continuation on 29 October 2026
+
+The saved implementation now includes email recovery and verification, signed-in password changes, onboarding, login deletion with academic-record retention, public policy/error pages, aggregate usage and error reporting, verified backups, bulk marks and corrections, and stable quiz-bank sampling. It also adds transactional write receipts, persistent rate limits, Judge0 redirect/error handling, Zod 4 compatibility, and ML holdout separation by student and outcome date.
+
+Current local checks: 79 Node tests, 13 Python ML tests, all seven browser suites, production build, lint and TypeScript checks pass. Browser checks include mobile recovery and verification, marks corrections, assessment publication and workflow navigation. The build reports a large Monaco chunk warning. Tests use temporary synthetic data and controlled services; these results do not establish live SMTP, AI, sandbox or deployment readiness. See the README and deployment guide for current setup instructions.
+
+The report below is the historical 5 October snapshot; its service observations and future-feature list are not a current environment inventory. Email recovery and question-bank sampling have since been implemented.
+
+## Earlier verification
+
 Verified on 5 October 2026 against the local application and isolated test workspaces.
 
 The application changes are complete and pass the checks below. Live AI, code execution, reviewed ML predictions, and public deployment still depend on external services, approved data, and a deployment target. Passing local tests does not activate those integrations.

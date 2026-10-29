@@ -6,7 +6,7 @@ import {migrateAcademics} from './academic-schema.js';
 export function openDatabase(dir) {
   mkdirSync(dir, { recursive: true });
   const db = new DatabaseSync(path.join(dir, 'factx.sqlite'));
-  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
+  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS departments(id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, code TEXT NOT NULL UNIQUE);
     CREATE TABLE IF NOT EXISTS classes(id TEXT PRIMARY KEY, name TEXT NOT NULL, department_id TEXT NOT NULL REFERENCES departments(id), program TEXT NOT NULL DEFAULT '', batch TEXT NOT NULL DEFAULT '', semester INTEGER NOT NULL DEFAULT 1, section TEXT NOT NULL DEFAULT '');
     CREATE TABLE IF NOT EXISTS subjects(id TEXT PRIMARY KEY, name TEXT NOT NULL, code TEXT NOT NULL UNIQUE, department_id TEXT NOT NULL REFERENCES departments(id));

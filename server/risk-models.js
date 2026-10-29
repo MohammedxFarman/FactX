@@ -11,17 +11,17 @@ const factor = z.object({ feature: z.string().min(1), value: finite.nullable(), 
 const manifestSchema = z.object({
   schema_version: z.literal(2), version: z.string().min(1).max(120), target: z.enum(RISK_TARGETS), horizon_days: z.number().int().min(1).max(365),
   validated: z.literal(true), reviewed_by: z.string().trim().min(1).max(300), reviewed_at: dateTime, trained_at: dateTime,
-  dataset_reference: z.string().min(1).max(500), metrics: z.record(z.unknown()), features: z.array(z.enum(RISK_FEATURES)).min(1).max(RISK_FEATURES.length),
+  dataset_reference: z.string().min(1).max(500), metrics: z.record(z.string(),z.unknown()), features: z.array(z.enum(RISK_FEATURES)).min(1).max(RISK_FEATURES.length),
   selected_algorithm: z.enum(ALGORITHMS), thresholds: z.object({ review: finite.min(0).max(1), high: finite.min(0).max(1) }),
   max_age_days: z.number().int().min(1).max(90).default(30), min_coverage: finite.min(0).max(1).default(0.5),
   artifact_sha256: z.string().regex(/^[a-f0-9]{64}$/), model_manifest_sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-  reference_stats: z.record(z.unknown()).default({}),
+  reference_stats: z.record(z.string(),z.unknown()).default({}),
 }).passthrough();
 const predictionSchema = z.object({
   student_id: z.string().uuid(), subject_id: z.string().uuid().nullable().optional(), probability: finite.min(0).max(1).nullable(),
   category: z.enum(['low', 'medium', 'high', 'insufficient_evidence']), factors: z.array(factor).max(100), observed_at: dateTime, created_at: dateTime,
   coverage: finite.min(0).max(1), missing_features: z.array(z.string()).max(100).default([]), evidence_reason: z.string().max(2000).default(''),
-  feature_values: z.record(finite.nullable()).optional(),
+  feature_values: z.record(z.string(),finite.nullable()).optional(),
 }).passthrough();
 export const riskArtifactSchema = z.object({ model: manifestSchema, algorithm: z.enum(ALGORITHMS), predictions: z.array(predictionSchema).min(1).max(100000) });
 

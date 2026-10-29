@@ -97,7 +97,8 @@ See [the integration setup guide](docs/INTEGRATIONS.md) for configuration and ac
 - Document RAG is implemented, including stored embeddings. It requires your running Ollama service and installed chat/embedding models. Timetable image or scanned-PDF uploads additionally require a vision model. Without those settings, the assistant uses academic record lookup and knowledge search uses text matching.
 - Programming execution requires a separate Judge0 service. Controlled local tests cover the adapter, but a real sandbox deployment and actual language execution still need validation.
 - ML needs an approved real dataset, training/evaluation, and a named institutional review before activation. Python syntax checks are complete; no model has been trained or activated by this verification work.
-- Historical enrollment snapshots, email-based password recovery, automated institution-specific grade conversion, question-bank sampling, and formal proctoring remain future extensions. Current password resets are administrator-managed; grades/points/credits are entered explicitly, and current enrollment determines access. These are separate from the external integrations above.
+- Email-based password recovery and verification are implemented and require SMTP configuration and actual delivery acceptance. Signed-in password changes and administrator resets remain available without SMTP. Question-bank sampling is implemented with a stable selection for each student.
+- Historical enrollment snapshots, automated institution-specific grade conversion, and formal proctoring remain future extensions. Grades/points/credits are entered explicitly, and current enrollment determines access.
 
 ## Verification
 
@@ -118,11 +119,13 @@ npm run test:browser
 npm run doctor
 ```
 
-`npm run verify` runs integration tests, builds the frontend, and runs all three browser suites in sequence, including timetable review and refresh. `npm run verify:all` also runs the Python ML regression checks and requires the optional Python dependencies. API tests include controlled Ollama and Judge0 services, permission boundaries, attachment ownership/review locks, and unavailable-service behavior. These fixtures are test-only and are not real AI models or code sandboxes.
+`npm run verify` runs integration tests, builds the frontend, and runs all seven browser suites in sequence, including timetable review, account recovery and marks corrections. Complete the build before running browser tests because they serve the production files. `npm run verify:all` also runs the Python ML regression checks and UI/performance checks, and requires the optional Python dependencies. API tests include controlled Ollama and Judge0 services, permission boundaries, attachment ownership/review locks, and unavailable-service behavior. These fixtures are test-only and are not real AI models or code sandboxes.
 
 Integration tests create temporary databases only. Browser tests create separate temporary workspaces, verify navigation and linked leave/substitution/syllabus/monitoring flows on desktop/mobile, and save screenshots in `test-results/`. They do not seed or change your real database. Tests require a local Playwright-compatible Chromium installation.
 
 Runtime data lives in `data/` by default. Back it up with the service stopped or using a SQLite-consistent backup strategy. Never publish `data/`, `.env`, or student uploads.
+
+Account controls in the profile support verification, password changes and login deletion. Deleting a login retains official academic records. Administrator Settings includes local aggregate page counts, error references and verified backups. Set `USAGE_ANALYTICS=false` to disable page counting. Set a private `FACTX_BACKUP_DIR` outside the runtime data directory to enable scheduled backups and the administrator backup action; the default interval is 24 hours. See [deployment acceptance](docs/DEPLOYMENT.md) for offline backup and restore commands.
 
 ## GitHub updates
 

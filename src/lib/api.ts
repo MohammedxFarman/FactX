@@ -10,7 +10,7 @@ export const api:Api=async<T,>(url:string,options:Parameters<Api>[1]={}):Promise
   // Keep mutable workflow and academic records fresh. The shell can cache stable
   // catalogue data, but leave requests, attendance, assessments and dashboard
   // summaries change during a session and may be updated by another role.
-  const cacheable=method==='GET'&&!/auth|session|submissions|events|notifications|timetable\/drafts|leave|substitutions|support-plans|syllabus|academic-monitoring|inbox|attendance|assessment-studio|activities|dashboard|grades|feedback|students/.test(url);
+  const cacheable=method==='GET'&&!/account|operations|marks|auth|session|submissions|events|notifications|timetable\/drafts|leave|substitutions|support-plans|syllabus|academic-monitoring|inbox|attendance|assessment-studio|activities|dashboard|grades|feedback|students/.test(url);
   if(cacheable&&cached&&Date.now()-cached.at<20000)return cached.value as T;
   if(cacheable&&pending.has(url))return pending.get(url) as Promise<T>;
   if(method!=='GET')clearCache();

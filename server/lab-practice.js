@@ -19,7 +19,7 @@ export function registerLabPractice({app,db,roles,activityFor}){
   const tests=input.mode==='samples'?(config.sampleTests||[]):[{input:input.input}];
   if(!tests.length)fail(400,'No public sample tests were provided for this lab. Use custom input.');
   running.add(req.user.id);
-  const remote=async(route,options={})=>{const response=await fetch(process.env.JUDGE_URL.replace(/\/$/,'')+route,{...options,headers:{'Content-Type':'application/json',...(process.env.JUDGE_TOKEN?{'X-Auth-Token':process.env.JUDGE_TOKEN}:{})},signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error('Sandbox unavailable');return response.json();};
+  const remote=async(route,options={})=>{const response=await fetch(process.env.JUDGE_URL.replace(/\/$/,'')+route,{...options,headers:{'Content-Type':'application/json',...(process.env.JUDGE_TOKEN?{'X-Auth-Token':process.env.JUDGE_TOKEN}:{})},redirect:'error',signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error('Sandbox unavailable');return response.json();};
   try{
    const languages=await remote('/languages'),language=languages.filter(l=>patterns[config.language||'python'].test(l.name)).at(-1);
    if(!language)fail(503,'This lab language is unavailable on the sandbox.');
@@ -29,7 +29,7 @@ export function registerLabPractice({app,db,roles,activityFor}){
     if(!job.token)throw new Error('No sandbox token');
     let result;
     for(let poll=0;poll<30;poll++){await new Promise(resolve=>setTimeout(resolve,500));result=await remote(`/submissions/${encodeURIComponent(job.token)}?base64_encoded=true&fields=status,stdout,stderr,compile_output,time,memory`);if(result.status?.id>2)break;}
-    if(!result?.status||result.status.id<=2)throw new Error('Sandbox timeout');
+    if(!result?.status||result.status.id<=2||result.status.id>=13)throw new Error('Sandbox evaluation did not complete successfully');
     results.push({test:i+1,status:result.status.description,passed:result.status.id===3,stdout:decode(result.stdout),stderr:decode(result.stderr)||decode(result.compile_output),timeSeconds:result.time});
    }
    res.json({mode:input.mode,tests:results});

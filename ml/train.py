@@ -82,6 +82,19 @@ def evaluate_candidates(development, test):
     return selected, results, fitted, out_of_fold
 
 
+def split_temporal_cohorts(frame):
+    """Reject holdouts contaminated by shared students or not-yet-observed labels."""
+    cutoff = frame.observed_at.quantile(.80)
+    development, test = frame[frame.observed_at < cutoff], frame[frame.observed_at >= cutoff]
+    if development.outcome.nunique() != 2 or test.outcome.nunique() != 2:
+        raise ValueError("Development and untouched future test cohorts must each contain both outcomes.")
+    if not set(development.student_id).isdisjoint(test.student_id):
+        raise ValueError("Development and future test cohorts must contain different students. Supply a student-disjoint temporal cohort.")
+    if development.outcome_observed_at.max() >= test.observed_at.min():
+        raise ValueError("Every development outcome must be observed before the first future test feature cutoff. Supply an outcome-maturation gap.")
+    return development, test, cutoff
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset")
@@ -96,10 +109,7 @@ def main():
     if not all(c.isalnum() or c in "-_ ." for c in args.version) or args.version in (".", ".."):
         raise ValueError("Use a safe, unique model version name.")
     frame = load_dataset(args.dataset, target=args.target).sort_values("observed_at").reset_index(drop=True)
-    cutoff = frame.observed_at.quantile(.80)
-    development, test = frame[frame.observed_at < cutoff], frame[frame.observed_at >= cutoff]
-    if development.outcome.nunique() != 2 or test.outcome.nunique() != 2:
-        raise ValueError("Development and untouched future test cohorts must each contain both outcomes.")
+    development, test, cutoff = split_temporal_cohorts(frame)
     selected, metrics, fitted, out_of_fold = evaluate_candidates(development, test)
     selected_probability = out_of_fold[selected]
     review_threshold = choose_threshold(development.outcome.to_numpy(), selected_probability)

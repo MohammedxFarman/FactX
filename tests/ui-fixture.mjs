@@ -5,11 +5,11 @@ import path from 'node:path';
 import {createApp} from '../server/app.js';
 import {startExecutionWorker} from '../server/execution.js';
 export function chromiumPath(){const root=path.join(homedir(),'AppData/Local/ms-playwright');return existsSync(root)?readdirSync(root).filter(n=>/^chromium-\d+$/.test(n)).flatMap(n=>['chrome-win64/chrome.exe','chrome-win/chrome.exe'].map(p=>path.join(root,n,p))).find(existsSync):undefined;}
-export async function fixture(){
+export async function fixture(options={}){
  const directory=mkdtempSync(path.join(tmpdir(),'factx-redesign-'));
  const sandbox=createServer(async(req,res)=>{res.setHeader('Content-Type','application/json');if(req.url==='/languages')return res.end(JSON.stringify([{id:71,name:'Python (3.12)'}]));if(req.method==='POST'){for await(const _chunk of req){/* Consume the controlled request body. */}return res.end(JSON.stringify({token:'controlled-test-token'}));}res.end(JSON.stringify({status:{id:3,description:'Accepted'},stdout:Buffer.from('5\n').toString('base64'),time:'0.01',memory:1024}));});
  await new Promise(r=>sandbox.listen(0,'127.0.0.1',r));const previous=process.env.JUDGE_URL;process.env.JUDGE_URL=`http://127.0.0.1:${sandbox.address().port}`;
- const {app,db}=createApp({dataDir:directory,setupToken:'redesign-test-setup'});const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});const base=`http://127.0.0.1:${server.address().port}`;
+ const {app,db}=createApp({dataDir:directory,setupToken:'redesign-test-setup',...options});const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});const base=`http://127.0.0.1:${server.address().port}`;
  const request=async(route,body,cookie,method=body?'POST':'GET')=>{const response=await fetch(base+'/api'+route,{method,headers:{'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},body:body?JSON.stringify(body):undefined});const data=await response.json();if(!response.ok)throw new Error(JSON.stringify({route,data}));return {data,cookie:response.headers.get('set-cookie')?.split(';')[0]};};
  const password='Synthetic-browser-password-284';const admin=(await request('/auth/setup',{name:'Design Admin',email:'admin@redesign.invalid',password,token:'redesign-test-setup'})).cookie;
  const post=async(route,body)=>(await request(route,body,admin)).data;
@@ -21,5 +21,5 @@ export async function fixture(){
  await post('/timetable',{class_id:classroom.id,subject_id:subject.id,faculty_id:faculty.id,day_of_week:new Date().getDay(),start_time:'09:00',end_time:'10:00',room:'Learning Studio 2'});
  for(let i=0;i<8;i++){const date=new Date(Date.now()-i*86400000).toISOString().slice(0,10);await post('/attendance',{class_id:classroom.id,subject_id:subject.id,date,period:1,records:[{student_id:student.id,status:i<5?'present':'absent'}]});}
  const stop=startExecutionWorker(db);
- return {base,db,lab,student,subject,classroom,password,admin,request,close:async()=>{stop();await new Promise(r=>server.close(r));await new Promise(r=>sandbox.close(r));db.close();if(previous===undefined)delete process.env.JUDGE_URL;else process.env.JUDGE_URL=previous;const resolved=path.resolve(directory);if(!resolved.startsWith(path.resolve(tmpdir())+path.sep)||!path.basename(resolved).startsWith('factx-redesign-'))throw new Error('Unexpected fixture directory');rmSync(resolved,{recursive:true,force:true});}};
+ return {base,db,directory,lab,student,subject,classroom,password,admin,request,close:async()=>{stop();await new Promise(r=>server.close(r));await new Promise(r=>sandbox.close(r));db.close();if(previous===undefined)delete process.env.JUDGE_URL;else process.env.JUDGE_URL=previous;const resolved=path.resolve(directory);if(!resolved.startsWith(path.resolve(tmpdir())+path.sep)||!path.basename(resolved).startsWith('factx-redesign-'))throw new Error('Unexpected fixture directory');rmSync(resolved,{recursive:true,force:true});}};
 }

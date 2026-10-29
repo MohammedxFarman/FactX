@@ -3,6 +3,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import { documentContent } from './timetable-agent.js';
 import { runDraftChecks } from './studio-demo.js';
+import { personalizedQuestions } from './assessments.js';
 
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
 const now=()=>new Date().toISOString();
@@ -11,14 +12,18 @@ const task=z.object({title:text,instructions:z.string().trim().min(1).max(10000)
 const lesson=z.object({title:text,content:z.string().trim().min(1).max(20000),resourceUrl:z.union([z.literal(''),z.string().url().refine(v=>/^https?:/.test(v))]).default('')});
 export const blueprintSchema=z.object({
   kind:z.enum(['assignment','lab','quiz','module']),title:text,description:z.string().max(30000).default(''),
-  tasks:z.array(task).max(30).default([]),lessons:z.array(lesson).max(40).default([]),
-  questions:z.array(z.object({prompt:text,options:z.array(text).min(2).max(6),answer:z.number().int().min(0).max(5)})).max(100).default([]),
+  tasks:z.array(task).max(500).default([]),lessons:z.array(lesson).max(40).default([]),
+  questionCount:z.number().int().min(1).max(500).optional(),
+  questions:z.array(z.object({prompt:text,options:z.array(text).min(2).max(6),answer:z.number().int().min(0).max(5)})).max(500).default([]),
   language:z.enum(['python','javascript','c','cpp','java']).default('python'),
   testCases:z.array(z.object({input:z.string().max(10000),output:z.string().max(10000),task:z.number().int().min(0).max(29)})).max(50).default([]),
   sampleTests:z.array(z.object({input:z.string().max(10000),output:z.string().max(10000)})).max(5).default([]),
   facultyNotes:z.string().max(20000).default(''),
 }).superRefine((v,c)=>{
   const issue=message=>c.addIssue({code:'custom',message});
+  if(v.kind!=='quiz'&&v.tasks.length>30)issue('Use at most 30 marked tasks.');
+  if(v.questionCount&&(v.kind!=='quiz'||v.questionCount>v.questions.length))issue('Questions per student must not exceed the quiz bank size.');
+  if(v.questionCount<v.questions.length&&v.tasks.some(t=>t.marks!==v.tasks[0]?.marks))issue('Sampled quiz questions must have equal marks so every student has the same maximum score.');
   if(v.kind==='module'&&!v.lessons.length)issue('Add at least one lesson.');
   if(v.kind!=='module'&&!v.tasks.length)issue('Add at least one marked task.');
   if(v.tasks.reduce((n,t)=>n+t.marks,0)>10000)issue('Total marks must not exceed 10,000.');
@@ -26,6 +31,7 @@ export const blueprintSchema=z.object({
   if(v.kind==='lab'&&(!v.testCases.length||v.testCases.some(t=>t.task>=v.tasks.length)||v.tasks.some((_,i)=>!v.testCases.some(t=>t.task===i))))issue('Each coding task needs at least one hidden test assigned to its task number.');
 });
 const decode=row=>({...row,blueprint:JSON.parse(row.blueprint),messages:JSON.parse(row.messages)});
+function demoBlueprint(d,userId){const b=d.blueprint;if(b.kind!=='quiz'||!b.questionCount)return b;const questions=personalizedQuestions(b.questions.map((q,i)=>({...q,taskIndex:i})),userId,d.id,b.questionCount);return {...b,tasks:questions.map(q=>b.tasks[q.taskIndex]),questions};}
 function publicBlueprint(b){const {facultyNotes,testCases,...safe}=b;return {...safe,questions:b.questions.map(({answer,...q})=>q)};}
 
 async function sourceContent(file){
@@ -72,18 +78,21 @@ export function registerAssessmentStudio({app,db,roles,audit,notify,needClass,ac
   app.patch('/api/assessment-studio/:id',faculty,(req,res)=>{const {revision,blueprint}=z.object({revision:z.number().int(),blueprint:blueprintSchema}).parse(req.body);const d=editable(req,req.params.id,revision);res.json(saveDraft(req,blueprint,d.messages,d));});
   const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*1024,files:1,fields:4,fieldSize:16000}}).single('source');
   const running=new Set();
-  app.post('/api/assessment-studio/generate',faculty,(req,res,next)=>{if(running.has(req.user.id)||running.size>=4)return next(Object.assign(new Error('A draft is already being generated. Please wait.'),{status:429}));running.add(req.user.id);res.on('finish',()=>running.delete(req.user.id));res.on('close',()=>running.delete(req.user.id));next();},upload,async(req,res)=>{
+  app.post('/api/assessment-studio/generate',faculty,(req,res,next)=>{if(running.has(req.user.id)||running.size>=4)return next(Object.assign(new Error('A draft is already being generated. Please wait.'),{status:429}));running.add(req.user.id);const releaseUpload=()=>{if(!req.generationStarted)running.delete(req.user.id);};res.on('finish',releaseUpload);res.on('close',releaseUpload);next();},upload,async(req,res)=>{
+    req.generationStarted=true;
+    try{
     const v=z.object({prompt:z.string().trim().min(5).max(12000),draftId:z.string().optional(),revision:z.coerce.number().int().optional()}).parse(req.body);
     const d=v.draftId?editable(req,v.draftId,v.revision):null;
     const b=await generate(v.prompt,await sourceContent(req.file),d?.blueprint);
     if(d)editable(req,d.id,d.revision);
     const messages=[...(d?.messages||[]),{request:v.prompt,source:req.file?.originalname||null,at:now()}].slice(-20);
     res.status(201).json(saveDraft(req,b,messages,d));
+    }finally{running.delete(req.user.id);}
   });
-  app.post('/api/assessment-studio/:id/preview',faculty,(req,res)=>{const {revision}=z.object({revision:z.number().int()}).parse(req.body);const d=editable(req,req.params.id,revision);db.prepare('UPDATE assessment_drafts SET preview_revision=? WHERE id=?').run(d.revision,d.id);res.json(publicBlueprint(d.blueprint));});
+  app.post('/api/assessment-studio/:id/preview',faculty,(req,res)=>{const {revision}=z.object({revision:z.number().int()}).parse(req.body);const d=editable(req,req.params.id,revision);db.prepare('UPDATE assessment_drafts SET preview_revision=? WHERE id=?').run(d.revision,d.id);res.json(publicBlueprint(demoBlueprint(d,req.user.id)));});
   app.post('/api/assessment-studio/:id/demo',faculty,async(req,res)=>{
-    const v=z.object({revision:z.number().int(),content:z.string().max(100000).default(''),answers:z.array(z.number().int()).max(100).default([])}).parse(req.body);
-    const d=editable(req,req.params.id,v.revision),b=d.blueprint;
+    const v=z.object({revision:z.number().int(),content:z.string().max(100000).default(''),answers:z.array(z.number().int()).max(500).default([])}).parse(req.body);
+    const d=editable(req,req.params.id,v.revision),b=demoBlueprint(d,req.user.id);
     if(b.kind==='quiz'){if(v.answers.length!==b.questions.length||v.answers.some((a,i)=>a<0||a>=b.questions[i].options.length))fail(400,'Answer every demo question.');return res.json({tasks:b.tasks.map((t,i)=>({title:t.title,score:v.answers[i]===b.questions[i].answer?t.marks:0,max_marks:t.marks}))});}
     if(b.kind!=='lab'||!v.content.trim())fail(400,'Enter code for a coding-lab demo.');
     if(running.has(req.user.id)||running.size>=4)fail(429,'Wait for your current assistant operation.');
@@ -96,9 +105,9 @@ export function registerAssessmentStudio({app,db,roles,audit,notify,needClass,ac
     needClass(req,v.class_id,v.subject_id);
     if(v.deadline&&(Date.parse(v.deadline)<=Date.parse(v.startAt)||Date.parse(v.deadline)<=Date.now()))fail(400,'The closing time must follow the opening time and be in the future.');
     const b=blueprintSchema.parse(d.blueprint),id=randomUUID();
-    const config={studio:true,assignmentMode:'class',startAt:v.startAt,attempts:v.attempts,durationMinutes:v.durationMinutes,tasks:b.tasks,lessons:b.lessons,facultyNotes:b.facultyNotes,language:b.language,testCases:b.testCases,sampleTests:b.sampleTests,questions:b.questions.map((q,i)=>({...q,marks:b.tasks[i]?.marks||0,taskIndex:i})),taskGrading:true};
+    const config={studio:true,assignmentMode:'class',startAt:v.startAt,attempts:v.attempts,durationMinutes:v.durationMinutes,questionCount:b.questionCount,tasks:b.tasks,lessons:b.lessons,facultyNotes:b.facultyNotes,language:b.language,testCases:b.testCases,sampleTests:b.sampleTests,questions:b.questions.map((q,i)=>({...q,marks:b.tasks[i]?.marks||0,taskIndex:i})),taskGrading:true};
     db.exec('BEGIN');try{
-      db.prepare('INSERT INTO activities VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,b.kind,b.title,b.description,v.class_id,v.subject_id,req.user.id,v.deadline,b.tasks.reduce((n,t)=>n+t.marks,0)||1,JSON.stringify(config),now());
+      db.prepare('INSERT INTO activities VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,b.kind,b.title,b.description,v.class_id,v.subject_id,req.user.id,v.deadline,(b.kind==='quiz'&&b.questionCount<b.questions.length?b.questionCount*b.tasks[0].marks:b.tasks.reduce((n,t)=>n+t.marks,0))||1,JSON.stringify(config),now());
       db.prepare('UPDATE assessment_drafts SET activity_id=?,updated_at=? WHERE id=?').run(id,now(),d.id);
       audit(req.user,'assessment.approved','activities',id,{draft:d.id,revision:d.revision,startAt:v.startAt});
       // Scheduled work is discovered at its opening time through authorized activity queries.
@@ -117,9 +126,11 @@ export function registerAssessmentStudio({app,db,roles,audit,notify,needClass,ac
     const sub=db.prepare('SELECT s.*,a.config,a.class_id,a.subject_id FROM submissions s JOIN activities a ON a.id=s.activity_id WHERE s.id=?').get(req.params.id);
     if(!sub)return next();const config=JSON.parse(sub.config);if(!config.studio||!config.tasks?.length)return next();
     needClass(req,sub.class_id,sub.subject_id);if(['queued','running'].includes(sub.status))fail(409,'Wait for sandbox evaluation to finish.');
-    const v=z.object({taskScores:z.array(z.number().nonnegative()).length(config.tasks.length),feedback:z.string().max(5000).default('')}).parse(req.body);
-    if(v.taskScores.some((score,i)=>score>config.tasks[i].marks))fail(400,'A task score exceeds its available marks.');
-    const score=v.taskScores.reduce((n,s)=>n+s,0),results={tasks:config.tasks.map((t,i)=>({title:t.title,score:v.taskScores[i],max_marks:t.marks})),method:'faculty_review'};
+    const selectedQuestions=config.studio&&config.questions?.length&&config.questionCount?personalizedQuestions(config.questions,sub.student_id,sub.activity_id,config.questionCount).sort((a,b)=>a.taskIndex-b.taskIndex):null;
+    const gradingTasks=selectedQuestions?selectedQuestions.map(q=>config.tasks[q.taskIndex]):config.tasks;
+    const v=z.object({taskScores:z.array(z.number().nonnegative()).length(gradingTasks.length),feedback:z.string().max(5000).default('')}).parse(req.body);
+    if(v.taskScores.some((score,i)=>score>gradingTasks[i].marks))fail(400,'A task score exceeds its available marks.');
+    const score=v.taskScores.reduce((n,s)=>n+s,0),results={tasks:gradingTasks.map((t,i)=>({title:t.title,score:v.taskScores[i],max_marks:t.marks,...(selectedQuestions?{taskIndex:selectedQuestions[i].taskIndex}:{})})),method:'faculty_review'};
     db.prepare("UPDATE submissions SET score=?,feedback=?,results=?,status='evaluated' WHERE id=?").run(score,v.feedback,JSON.stringify(results),sub.id);audit(req.user,'submission.task_evaluated','submissions',sub.id,{previousScore:sub.score,score});notify(sub.student_id,'Your assessment has been evaluated',v.feedback);res.json({ok:true,score});
   });
 }
