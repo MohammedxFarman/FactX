@@ -1,5 +1,44 @@
 # FactX verification report
 
+## Handoff verification on 22 November 2026
+
+Reviewed the pending 21 November attendance and responsive-shell changes for
+delivery. Application tests (80), Python ML tests (13), lint, TypeScript and the
+production build pass. The build required access outside the filesystem sandbox
+and retains the existing Monaco chunk-size warning.
+
+All seven workflow browser suites and the redesigned regression suite pass,
+including attendance correction
+persistence, rejected saves, role boundaries and desktop-to-tablet sidebar state.
+Desktop screenshot capture now resets scroll position before taking the image.
+Lighthouse measured performance 95 desktop / 62 simulated mobile, accessibility
+96, best practices 100 and SEO 100 on both profiles, with zero measured layout
+shift. These are local lab measurements; mobile loading still needs improvement.
+
+## Local completion on 21 November 2026
+
+Attendance now supports selecting a recorded day, filtering its class sessions,
+and correcting individual records. Admins and faculty assigned to the specific
+class and subject can correct a status; students and HODs retain read-only access.
+Corrections preserve the session identity, update reports, and create audit entries.
+Overall attendance and monthly trends continue to use the search/subject-filtered
+history rather than only the selected day. Changing filters clears stale selections,
+and failed corrections leave the recorded value visible with an error message.
+
+The responsive shell now has a single sidebar geometry definition, an expanded
+tablet/mobile drawer independent of desktop collapse state, accessible navigation
+labels, and narrower-screen card layouts. The environment example retains its
+complete setup guidance and leaves optional services disabled until configured.
+
+Verification: 80 Node tests, 13 Python ML tests, TypeScript, lint, production build,
+all seven workflow browser suites, the redesigned UI suite, and the additional
+login/sidebar navigation suite pass. Regression coverage includes attendance role
+and subject permissions, report updates, persistence after reload, rejected saves,
+unchanged overall statistics when selecting a day, and desktop-to-tablet collapse.
+Tests use isolated synthetic records and controlled services. Monaco still causes
+the existing large-chunk build warning. These checks do not certify live email,
+Judge0 isolation, reviewed ML activation, or public deployment.
+
 ## Continuation on 29 October 2026
 
 The saved implementation now includes email recovery and verification, signed-in password changes, onboarding, login deletion with academic-record retention, public policy/error pages, aggregate usage and error reporting, verified backups, bulk marks and corrections, and stable quiz-bank sampling. It also adds transactional write receipts, persistent rate limits, Judge0 redirect/error handling, Zod 4 compatibility, and ML holdout separation by student and outcome date.

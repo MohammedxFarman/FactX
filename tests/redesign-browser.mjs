@@ -1,4 +1,4 @@
-import {chromium} from '@playwright/test';
+import {chromium,expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {fixture,chromiumPath} from './ui-fixture.mjs';
@@ -7,8 +7,56 @@ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(['error'
 try{
  await page.goto(test.base);await page.getByRole('heading',{name:/Less searching/}).waitFor();await page.screenshot({path:'test-results/redesign-landing-desktop.png',fullPage:true});
  await page.getByLabel('Institutional email').fill('student@redesign.invalid');await page.getByLabel('Password',{exact:true}).fill(test.password);await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();await page.getByText('Database connected',{exact:false}).waitFor();
+ await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+ await page.waitForFunction(()=>window.scrollY===0);
  await page.screenshot({path:'test-results/redesign-home-desktop.png',fullPage:true});
  const go=async(id)=>{await page.evaluate(id=>{location.hash=id;},id);await page.locator('.fx-skeleton-page').waitFor({state:'hidden'});};
+ await page.getByRole('button',{name:'Collapse sidebar',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Expand sidebar',exact:true})).toHaveAttribute('aria-expanded','false');
+ assert.equal(Math.round((await page.locator('#workspace-sidebar').boundingBox()).width),78);
+ await page.setViewportSize({width:1024,height:900});
+ await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ await expect(page.locator('.workspace-selector')).toBeVisible();
+ await expect(page.locator('.sidebar-assistant')).toBeVisible();
+ await page.locator('.sidebar-shade').click({position:{x:900,y:200}});
+ await page.setViewportSize({width:1440,height:1000});
+ await page.getByRole('button',{name:'Expand sidebar',exact:true}).click();
+ await go('attendance');
+ const overall=page.locator('.fx-metric').filter({hasText:'Overall attendance'}).locator('strong');
+ await expect(overall).toHaveText('63%');
+ const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+ await page.getByLabel('Attendance month',{exact:true}).fill(yesterday.slice(0,7));
+ await page.getByRole('button',{name:yesterday,exact:true}).click();
+ await expect(page.getByRole('heading',{name:`Classes on ${yesterday}`})).toBeVisible();
+ await expect(overall).toHaveText('63%');
+ await expect(page.getByRole('combobox',{name:'Attendance for Alex Student'})).toHaveCount(0);
+ await page.getByLabel('Search attendance').fill('no matching student');
+ await expect(page.getByRole('heading',{name:'No matching attendance'})).toBeVisible();
+ await page.getByLabel('Search attendance').fill('');
+ const staff=await browser.newPage({viewport:{width:1440,height:1000}});
+ try{
+  await staff.goto(test.base);
+  await staff.getByLabel('Institutional email').fill('faculty@redesign.invalid');
+  await staff.getByLabel('Password',{exact:true}).fill(test.password);
+  await staff.getByRole('button',{name:'Sign in to FactX',exact:true}).click();
+  await staff.getByText('Database connected',{exact:false}).waitFor();
+  await staff.evaluate(()=>{location.hash='attendance';});
+  const correction=staff.getByRole('combobox',{name:'Attendance for Alex Student'});
+  await correction.selectOption('absent');
+  await expect(correction).toBeEnabled();
+  await expect(correction).toHaveValue('absent');
+  await expect(staff.locator('.fx-metric').filter({hasText:'Overall attendance'}).locator('strong')).toHaveText('50%');
+  await staff.reload();
+  await expect(correction).toHaveValue('absent');
+  await correction.selectOption('present');
+  await expect(correction).toBeEnabled();
+  await expect(correction).toHaveValue('present');
+  await staff.route('**/api/attendance/*',route=>route.fulfill({status:403,json:{error:'This subject is no longer assigned to you.'}}));
+  await correction.selectOption('excused');
+  await expect(staff.getByRole('alert')).toHaveText('This subject is no longer assigned to you.');
+  await expect(correction).toBeEnabled();
+  await expect(correction).toHaveValue('present');
+ }finally{await staff.close();}
  for(const [id,title] of [['timetable','Your weekly rhythm'],['attendance','Subject breakdown'],['learning','All your study materials'],['assessments','Your assessment timeline'],['labs','Your coding workspace'],['analytics','Strengths & areas to work on']]){await go(id);await page.getByRole('heading',{name:title,exact:true}).waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,id+' desktop overflow');}
  await page.getByRole('button',{name:'Switch to dark mode'}).click();await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');await page.screenshot({path:'test-results/redesign-dark.png',fullPage:true});await page.getByRole('button',{name:'Switch to light mode'}).click();
  await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'Where would you like to go?'}).waitFor();await page.getByLabel('Search sections and tasks').fill('Study');await page.getByRole('button',{name:'Study Materials'}).last().click();await page.getByRole('heading',{name:'All your study materials'}).waitFor();
