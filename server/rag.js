@@ -43,7 +43,7 @@ export function registerRag({app,db,roles,audit,uploads}){
       context.push('['+reference+'] '+s.name+' ('+s.roll_number+'): '+JSON.stringify(a));
       sources.push({title:s.name,student_id:s.id,reference});
     }
-    if(!context.length)return remember(req,question,{answer:'There is not enough authorized, indexed information to answer that question. Ask your administrator to index relevant institutional documents, or specify a student you can access.',sources:[],mode:'rag'});
+    if(!context.length)return remember(req,question,{answer:'There is not enough authorized, indexed information to answer that question. No relevant indexed documents or student records were found for your access. An administrator or department HOD can upload a text PDF or TXT file in Documents, then select Index document in Knowledge. You can also ask about attendance or marks for a student you can access.',sources:[],mode:'rag'});
     const result=await ollama('/api/chat',{
       model:process.env.OLLAMA_CHAT_MODEL,stream:false,
       messages:[
