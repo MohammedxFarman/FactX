@@ -1,0 +1,120 @@
+/* Only dark mode: keep the existing light palette and layout untouched. */
+:root[data-theme=dark] {
+  --bg: #101915;
+  --background: #101915;
+  --surface: #19271f;
+  --surface-2: #23352b;
+  --ink: #f0f5ef;
+  --muted: #b8c8bc;
+  --line: #42584a;
+  --accent: #c0e5a8;
+  --accent-soft: #30462f;
+  --green: #c0e5a8;
+  --deep: #f0f5ef;
+  --lime: #30462f;
+  --danger: #ffb4bd;
+}
+
+/* Legacy workflow typography uses fixed colors in the light stylesheet. */
+:root[data-theme=dark] :is(
+  .page-heading h1,.welcome-banner h2,.activity-card h3,.settings-card h3,
+  .info-banner strong,.risk-panel h2,.quick-actions strong,.workspace-note strong,
+  .report-profile h2,.report-stats strong,.report-body h3,.report-feedback strong,
+  .help-content h3,.activity-detail>h3,.quiz-question h4,.evaluation-box h4,
+  .notification-list strong,.upcoming-item>span:nth-child(2)>strong,
+  .day-column h3,.announcement-card h2,.export-panel h2,.access-editor>h3,
+  .builder-title>strong,.grade-summary strong,.hod-intro h2,.inbox-item h2,
+  .support-history strong,.coverage-session h3,.syllabus-course h2,
+  .hod-monitoring-snapshot h2,.syllabus-topics strong,.timetable-draft-summary h3,
+  .timetable-row-heading strong,.timetable-agent>header h2,.modal>header h2,
+  .field>span,.field input,.field select,.field textarea,.auth-form .field>span,
+  .chat-message>p,.assistant-input textarea,.knowledge-result>p,
+  .check-options label,.question-builder .form-grid>label,.quiz-question>label,
+  .table-scroll td,.table-scroll th,.stat-card>strong,.date-square>strong,
+  .fx-home-hero,.fx-home-hero h2,.fx-metric.lime,.fx-orbit-art>div
+) { color: var(--ink); }
+
+:root[data-theme=dark] :is(
+  .breadcrumb,.breadcrumb strong,.date-chip,.banner-label,.welcome-banner p,
+  .stat-card>div>span:first-child,.chart-grid-lines>span,.chart-empty-label,
+  .chart-empty-label>span,.chart-empty-label p,.chart-footer,.panel-footnote,
+  .quick-actions small,.workspace-note>div>span,.table-toolbar>span,.collection-label,
+  .activity-card>p,.activity-meta,.info-banner p,.risk-panel>p,.model-steps,
+  .suggestion p,.suggestion small,.upcoming-item small,.document-name small,
+  .feedback-list article>div>small,.feedback-list article>p,.settings-card>div>span,
+  .loading,.page-loading,.modal>header p,.field>small,.form-footer>span,
+  .upload-zone,.upload-zone>p,.profile-modal>p,.help-content>p,.roster-caption,
+  .report-profile p,.report-profile div>span,.report-stats span,.report-body>.muted,
+  .report-feedback p,.timeline small,.timeline p,.activity-detail>.preserve-lines,
+  .evaluation-box p,.notification-list p,.notification-list small,
+  .assistant-panel>header p,.assistant-intro p,.assistant-panel>footer>p,
+  .chat-message>small,.day-column>header,.session-time,.day-column article>p,
+  .day-column article>small,.day-empty,.announcement-card>p,.knowledge-result>small,
+  .export-panel p,.access-editor>p,.builder-title>span,.question-builder>section>small,
+  .grade-summary span,.hod-intro p,.hod-priority-grid small,.inbox-item p,
+  .inbox-item small,.support-tasks small,.support-history small,.support-tasks p,
+  .support-history p,.coverage-session p,.syllabus-course header p,
+  .hod-monitoring-snapshot p,.syllabus-progress span,.syllabus-topics small,
+  .syllabus-topics p,.timetable-agent>header p,.timetable-draft-summary p,
+  .timetable-review-note,.timetable-row-heading small,.timetable-row-fields label,
+  .timetable-row-fields small,.fx-home-hero p,.fx-home-hero .eyebrow,
+  .fx-summary .fx-metric.lime small,.auth-top,.auth-bottom,.auth-note
+) { color: var(--muted); }
+
+/* Pair every tinted surface with a readable foreground. */
+:root[data-theme=dark] :is(
+  .modal>header,.assistant-panel>header,.assistant-panel>footer,.chat-message.user,
+  .assistant-intro>button,.workspace-menu,.question-builder>section,.timetable-row,
+  .target-options>label,.support-tasks>section,.coverage-session
+) { background: var(--surface); color: var(--ink); border-color: var(--line); }
+
+:root[data-theme=dark] :is(
+  .assistant-input,.chat-message,.source-link,.info-banner,.welcome-banner,
+  .workspace-note,.report-stats,.report-feedback,.evaluation-box,.upload-zone,
+  .roster-caption,.day-column>header,.grade-summary>div,.hod-priority-grid>button,
+  .hod-review-list>div,.hod-review-list>button,.timetable-review-note,
+  .fx-home-hero,.fx-metric.lime,.fx-orbit-art>div,pre,.date-square,.empty-icon,
+  .model-steps span:first-child,.tabs>button>span,.inbox-category
+) { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+
+:root[data-theme=dark] :is(.text-button,.panel-bottom-link,.knowledge-result>a,
+  .source-link,.welcome-banner button,.fx-home-hero button,.big-star,
+  .suggestion>span,.workspace-option,.workspace-option small) { color: var(--accent); }
+:root[data-theme=dark] :is(input,textarea)::placeholder { color: var(--muted); opacity: 1; }
+:root[data-theme=dark] .search-input input::placeholder { color: var(--muted); }
+:root[data-theme=dark] input[type=file]::file-selector-button {
+  background: var(--surface-2); color: var(--ink); border: 1px solid var(--line);
+}
+:root[data-theme=dark] .button:hover { background: #d3efc1; color: #19271f; }
+:root[data-theme=dark] :is(.button.outline,.button.ghost):hover {
+  background: var(--surface-2); color: var(--ink); border-color: var(--accent);
+}
+:root[data-theme=dark] :is(.icon-button:hover,.clickable:hover,.panel-bottom-link:hover,
+  .assistant-intro>button:hover,.workspace-option:hover,.hod-priority-grid>button:hover) {
+  background: var(--surface-2); color: var(--ink);
+}
+:root[data-theme=dark] .assistant-input .icon-button {
+  background: var(--accent); color: #19271f;
+}
+:root[data-theme=dark] .assistant-timetable-trigger {
+  background: var(--surface-2); color: var(--accent); border-color: var(--line);
+}
+:root[data-theme=dark] :is(.badge.green,.icon-box,.sage,.fx-status.Graded) {
+  background: #294532; color: #d3efc1;
+}
+:root[data-theme=dark] :is(.badge.orange,.icon-box.orange,.peach,.fx-lab-warning) {
+  background: #493720; color: #ffdb9e; border-color: #80613b;
+}
+:root[data-theme=dark] :is(.badge.purple,.icon-box.purple,.lilac,.fx-status.Upcoming) {
+  background: #39304e; color: #e0ceff;
+}
+:root[data-theme=dark] :is(.icon-box.blue,.fx-status.Submitted) {
+  background: #243e51; color: #c0e1ff;
+}
+:root[data-theme=dark] :is(.error,.fx-status.Missed,.timetable-row-error,.assessment-clock.expired) {
+  background: #482b32; color: var(--danger); border-color: #80505a;
+}
+:root[data-theme=dark] .error>button { color: var(--danger); }
+:root[data-theme=dark] .avatar { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+:root[data-theme=dark] .sidebar :is(.workspace-chip small,.profile-button small) { color: #bdcfbf; }
+:root[data-theme=dark] .timetable-row-fields :is(input,select) { color: var(--ink); }

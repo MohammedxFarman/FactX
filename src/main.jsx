@@ -13,6 +13,7 @@ import './lab.css';
 import './landing.css';
 import './compat.css';
 import './shell.css';
+import './dark-theme.css';
 import Landing from './pages/Landing';
 import {AcademicManagement,AcademicPeople} from './AcademicManagement.jsx';
 import { api, clearCache, prefetch } from './lib/api';
