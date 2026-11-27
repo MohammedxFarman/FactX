@@ -26,7 +26,7 @@ try{
     await page.getByLabel('Institutional email').fill(account.email);
     await page.getByLabel('Password',{exact:true}).fill(account.password);
     await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();
-    await page.getByRole('heading',{name:/Good (morning|afternoon|evening), Device/}).waitFor();
+    await page.getByRole('heading',{name:'Overview',exact:true}).waitFor();
     return {page,context,account};
   };
   const students=await Promise.all(manifest.accounts.filter(a=>a.role==='STUDENT').map((a,i)=>login(a,[390,768,1440,360,414][i])));

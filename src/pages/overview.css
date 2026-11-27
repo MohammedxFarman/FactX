@@ -1,6 +1,6 @@
-﻿.admin-overview-heading { margin-bottom:24px; }
-.admin-overview-heading .eyebrow,.admin-overview-heading p { display:none; }
-.admin-overview-heading h1 { font-size:28px; margin:0; }
+﻿.overview-heading { margin-bottom:24px; }
+.overview-heading .eyebrow,.overview-heading p { display:none; }
+.overview-heading h1 { font-size:28px; margin:0; }
 .overview-priorities { align-items:stretch; margin-bottom:28px; }
 .overview-priorities .fx-schedule-row { min-width:0; }
 .overview-priorities .fx-schedule-row>span { min-width:0; overflow-wrap:anywhere; }

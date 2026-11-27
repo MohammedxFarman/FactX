@@ -54,7 +54,7 @@ try{
   await page.getByRole('button',{name:'Hide password'}).click();
   await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();
   await page.locator('.sidebar').waitFor();
-  await page.getByRole('heading',{name:/Good (morning|afternoon|evening), Design/}).waitFor();
+  await page.getByRole('heading',{name:'Overview',exact:true}).waitFor();
   const groups=page.locator('.sidebar .nav-group');
   assert.ok(await groups.count()>1);
   assert.equal(await page.locator('.nav-item .nav-chevron').count(),0,'Leaf routes have no chevrons');

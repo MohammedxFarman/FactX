@@ -164,7 +164,25 @@ try {
       await portalPage.getByLabel('Institutional email').fill(email);
       await portalPage.getByLabel('Password',{exact:true}).fill('Browser-test-password-382');
       await portalPage.getByRole('button',{name:'Sign in to FactX'}).click();
-      await portalPage.getByRole('heading',{name:/Good .*Portal/}).waitFor();
+      await portalPage.getByRole('heading',{name:'Overview',exact:true}).waitFor();
+      const expectedTiles=['inbox','timetable','academics',...(role==='HOD'?[]:['learning']),'assessments','reports'];
+      await portalPage.getByRole('heading',{name:'Quick Access',exact:true}).waitFor();
+      assert.deepEqual(await portalPage.locator('.overview-tile').evaluateAll(links=>links.map(link=>link.getAttribute('href'))),expectedTiles.map(id=>'#'+id));
+      for(const width of [1280,390,320]) {
+        await portalPage.setViewportSize({width,height:900});
+        assert.equal(await portalPage.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${role} Overview overflow at ${width}`);
+        for(const destination of expectedTiles) {
+          await portalPage.locator(`.overview-tile[href="#${destination}"]`).focus();
+          await portalPage.keyboard.press('Enter');
+          await portalPage.waitForFunction(id=>location.hash==='#'+id,destination);
+          await portalPage.locator('.fx-skeleton-page').waitFor({state:'hidden'});
+          assert.equal(await portalPage.locator('.breadcrumb-current').textContent()==='Workspace',false);
+          await portalPage.evaluate(()=>{location.hash='overview';});
+          await portalPage.getByRole('heading',{name:'Quick Access',exact:true}).waitFor();
+        }
+      }
+      await portalPage.setViewportSize({width:1280,height:900});
+
       await portalPage.locator('.workspace-chip').click();
       const menu=portalPage.getByRole('menu',{name:'Available workspaces'});
       assert.equal(await menu.getByRole('menuitem').count(),1);
