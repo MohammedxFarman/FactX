@@ -1,4 +1,4 @@
-import {randomBytes} from 'node:crypto';
+import {randomBytes,randomInt} from 'node:crypto';
 import nodemailer from 'nodemailer';
 import {z} from 'zod';
 import {digest,hashPassword,verifyPassword} from './security.js';
@@ -10,7 +10,9 @@ const tokenSchema=z.string().regex(/^[a-f0-9]{64}$/);
 export function createAccounts({db,sendMail}){
  db.exec(`CREATE TABLE IF NOT EXISTS account_state(user_id TEXT PRIMARY KEY REFERENCES users(id),verified_at TEXT,onboarded_at TEXT,deleted_at TEXT);
  CREATE TABLE IF NOT EXISTS account_tokens(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),purpose TEXT NOT NULL,expires_at INTEGER NOT NULL);
- CREATE INDEX IF NOT EXISTS account_tokens_owner ON account_tokens(user_id,purpose);`);
+ CREATE INDEX IF NOT EXISTS account_tokens_owner ON account_tokens(user_id,purpose);
+ CREATE TABLE IF NOT EXISTS account_reset_codes(challenge TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),code_hash TEXT NOT NULL,expires_at INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0);
+ CREATE INDEX IF NOT EXISTS account_reset_codes_owner ON account_reset_codes(user_id);`);
  const mailReady=()=>!!sendMail||emailConfiguration(process.env).configured;
  const deliver=sendMail||(async(message)=>{
   const port=Number(process.env.SMTP_PORT||587);
@@ -32,12 +34,37 @@ export function createAccounts({db,sendMail}){
  const publicRoutes=app=>{
   app.get('/api/public/info',(_req,res)=>res.json({institution:process.env.INSTITUTION_NAME||'Your institution',contact:process.env.SUPPORT_EMAIL||null,mailConfigured:mailReady(),requireVerification:process.env.REQUIRE_EMAIL_VERIFICATION==='true'}));
   app.post('/api/auth/forgot-password',rateLimit(db,{name:'recovery-email',max:5,windowMs:3600000,key:req=>digest(String(req.body?.email||'').trim().toLowerCase())}),async(req,res)=>{
-   const {email}=z.object({email:z.string().trim().email().max(254)}).strict().parse(req.body);
+   const {email,method}=z.object({email:z.string().trim().email().max(254),method:z.enum(['link','otp']).default('link')}).strict().parse(req.body);
    if(!mailReady())fail(503,'Email recovery is not configured. Contact your institution administrator.');
    const user=db.prepare('SELECT * FROM users WHERE email=? AND active=1').get(email.toLowerCase());
+   if(method==='otp'){
+    const challenge=randomBytes(32).toString('hex'),code=String(randomInt(0,1000000)).padStart(6,'0'),codeHash=hashPassword(code);
+    db.prepare('DELETE FROM account_reset_codes WHERE expires_at<=?').run(Date.now());
+    if(user){
+     db.prepare('DELETE FROM account_reset_codes WHERE user_id=?').run(user.id);
+     db.prepare('INSERT INTO account_reset_codes VALUES(?,?,?,?,0)').run(challenge,user.id,codeHash,Date.now()+10*60000);
+     try{await deliver({to:user.email,subject:'Your FactX password reset code',text:`Your password reset code is: ${code}\n\nEnter this code in the FactX window where you requested it. It expires in 10 minutes and can be used once. Never share this code. If you did not request it, ignore this email.`});}
+     catch{db.prepare('DELETE FROM account_reset_codes WHERE challenge=?').run(challenge);recordDeliveryFailure();}
+    }
+    return res.json({challenge,message:'If an active account matches that address, a reset code will be sent. Check your inbox and spam folder. Contact your administrator if it does not arrive.'});
+   }
    if(user){try{await issue(user,'reset');}catch{recordDeliveryFailure();}}
    res.json({message:'If an active account matches that address, a reset link will be sent. Contact your administrator if it does not arrive.'});
   });
+  app.post('/api/auth/reset-password-code',atomicWrite(db,(req,res)=>{
+   const {challenge,code,password}=z.object({challenge:tokenSchema,code:z.string().regex(/^\d{6}$/),password:z.string().min(12).max(128)}).strict().parse(req.body);
+   const record=db.prepare('SELECT c.*,u.active FROM account_reset_codes c JOIN users u ON u.id=c.user_id WHERE challenge=?').get(challenge);
+   const invalid=()=>res.status(400).json({error:'This reset code is invalid or expired. Request a new code if needed.'});
+   if(!record?.active||record.expires_at<=Date.now()||record.attempts>=5)return invalid();
+   // Return an error response rather than throwing so failed attempts are committed.
+   db.prepare('UPDATE account_reset_codes SET attempts=attempts+1 WHERE challenge=?').run(challenge);
+   if(!verifyPassword(code,record.code_hash))return invalid();
+   db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hashPassword(password),record.user_id);
+   db.prepare('DELETE FROM sessions WHERE user_id=?').run(record.user_id);
+   db.prepare('DELETE FROM account_tokens WHERE user_id=?').run(record.user_id);
+   db.prepare('DELETE FROM account_reset_codes WHERE user_id=?').run(record.user_id);
+   res.json({message:'Password updated. Sign in with your new password.'});
+  }));
   app.post('/api/auth/reset-password',atomicWrite(db,(req,res)=>{
    const {token,password}=z.object({token:tokenSchema,password:z.string().min(12).max(128)}).strict().parse(req.body);
    const record=db.prepare("SELECT t.*,u.active FROM account_tokens t JOIN users u ON u.id=t.user_id WHERE token_hash=? AND purpose='reset' AND expires_at>?").get(digest(token),Date.now());
@@ -45,6 +72,7 @@ export function createAccounts({db,sendMail}){
    db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hashPassword(password),record.user_id);
    db.prepare('DELETE FROM sessions WHERE user_id=?').run(record.user_id);
    db.prepare('DELETE FROM account_tokens WHERE user_id=?').run(record.user_id);
+   db.prepare('DELETE FROM account_reset_codes WHERE user_id=?').run(record.user_id);
    res.json({message:'Password updated. Sign in with your new password.'});
   }));
   app.post('/api/auth/verify-email',atomicWrite(db,(req,res)=>{
@@ -64,6 +92,7 @@ export function createAccounts({db,sendMail}){
    db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hashPassword(password),req.user.id);
    db.prepare('DELETE FROM sessions WHERE user_id=?').run(req.user.id);
    db.prepare('DELETE FROM account_tokens WHERE user_id=?').run(req.user.id);
+   db.prepare('DELETE FROM account_reset_codes WHERE user_id=?').run(req.user.id);
    res.clearCookie('factx_session',{path:'/'});
    res.json({message:'Password updated. Sign in with your new password.'});
   }));
@@ -83,6 +112,7 @@ export function createAccounts({db,sendMail}){
    if(!verifyPassword(password,req.user.password_hash))fail(403,'Enter your current password to delete your account.');
    if(req.user.role==='ADMIN'&&db.prepare("SELECT COUNT(*) n FROM users WHERE role='ADMIN' AND active=1").get().n<=1)fail(409,'Assign another active administrator before deleting this account.');
    const uid=req.user.id;
+   db.prepare('DELETE FROM account_reset_codes WHERE user_id=?').run(uid);
    db.prepare("UPDATE users SET name='Deleted account',email=?,password_hash=?,roll_number=NULL,active=0 WHERE id=?").run(`deleted-${uid}@account.invalid`,hashPassword(randomBytes(32).toString('hex')),uid);
    for(const [table,column] of [['sessions','user_id'],['account_tokens','user_id'],['student_profile','user_id'],['ai_conversations','user_id'],['notifications','user_id'],['activity_work','student_id'],['request_receipts','user_id']])db.prepare(`DELETE FROM ${table} WHERE ${column}=?`).run(uid);
    db.prepare('INSERT INTO account_state(user_id,deleted_at) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET verified_at=NULL,deleted_at=excluded.deleted_at').run(uid,new Date().toISOString());

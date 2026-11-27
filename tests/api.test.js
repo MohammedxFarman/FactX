@@ -93,10 +93,13 @@ test('assignment and leave attachments enforce ownership, file type and review l
 test('configured RAG retrieves authorized evidence and fails clearly when its service fails', async () => {
   const prompts = [];
   let unavailable = false;
+  let embeddingsUnavailable = false;
   const mock = await service((url, body, headers) => {
     assert.equal(headers.authorization, 'Bearer integration-test-only');
     if (unavailable) return {status:503,body:{error:'Test outage'}};
-    if (url === '/api/embed') return {body:{embeddings:body.input.map(() => [1, 0, 0])}};
+    if (url === '/api/embed') return embeddingsUnavailable
+      ? {status:503,body:{error:'Test embedding outage'}}
+      : {body:{embeddings:body.input.map(() => [1, 0, 0])}};
     if (url === '/api/chat') { prompts.push(body); return {body:{message:{content:'Authorized academic evidence [D1].'}}}; }
     return {status:404,body:{}};
   });
@@ -115,6 +118,10 @@ test('configured RAG retrieves authorized evidence and fails clearly when its se
       assert.ok(answer.sources.every(source=>!source.document_id||source.document_id!==otherDocument.id));
       assert.ok(!JSON.stringify(prompts).includes('OTHER-DEPARTMENT-SECRET'));
       assert.equal(prompts.length,1);
+      embeddingsUnavailable = true;
+      const lexicalAnswer = await post('/assistant',{message:'What does my private document say?'},state.s1.cookie);
+      assert.equal(lexicalAnswer.mode,'rag');
+      assert.ok(lexicalAnswer.sources.some(source=>source.document_id===privateDocument.id));
       unavailable = true;
       const beforeCount=db.prepare('SELECT COUNT(*) n FROM ai_conversations').get().n;
       assert.equal((await request('/assistant',{method:'POST',cookie:state.s1.cookie,body:{message:'Summarize my evidence'}})).status,503);

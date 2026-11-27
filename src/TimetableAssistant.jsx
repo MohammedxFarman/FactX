@@ -93,6 +93,7 @@ export function TimetableAssistant({ api, ui, onClose, onSaved }) {
           <input aria-label="Timetable file" type="file" disabled={!!busy} accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={event => setFile(event.target.files?.[0] || null)} required/>
           <p>{file ? file.name : 'Maximum 10 MB · up to 8 PDF pages'}</p></div>
           <Field label="What should the agent do?"><textarea disabled={!!busy} value={instruction} onChange={event => setInstruction(event.target.value)} maxLength={2000} rows={3} placeholder="Extract Monday’s timetable for my assigned classes."/></Field>
+          {busy === 'upload' && <p className="timetable-status" role="status">Extraction can take several minutes, especially for images and scanned PDFs.</p>}
           <div className="timetable-agent-actions"><Button type="submit" disabled={!!busy || !file} icon={busy === 'upload' ? LoaderCircle : Sparkles}>{busy === 'upload' ? 'Reading timetable…' : 'Read and prepare draft'}</Button></div>
         </form>
         {drafts.length > 0 && <section className="timetable-saved" aria-label="Saved timetable drafts"><h3>Saved drafts and imports</h3><p>Continue a saved review or inspect sessions already added.</p>
@@ -101,7 +102,7 @@ export function TimetableAssistant({ api, ui, onClose, onSaved }) {
         </section>}
       </> : <div className="timetable-draft">
         <div className="timetable-draft-summary"><div><Badge tone={draft.status === 'committed' ? 'green' : 'orange'}>{draft.status === 'committed' ? 'Added to timetable' : dirty ? 'Unsaved corrections' : 'Review required'}</Badge>
-          <h3>{dirty ? 'Save your corrections to check assignments, times, and conflicts.' : draft.summary}</h3><p>{draft.filename} · {draft.extractionMode === 'vision' ? 'Image extraction' : 'Text PDF extraction'} · {draft.pages || 1} page(s)</p></div>
+          <h3>{dirty ? 'Save your corrections to check assignments, times, and conflicts.' : draft.summary}</h3><p>{draft.filename} · {draft.extractionMode === 'text_pdf' ? 'Text PDF extraction' : 'Image extraction'} · {draft.pages || 1} page(s)</p></div>
           <Button variant="ghost" disabled={!!busy || dirty} onClick={startUpload}>Back to uploads</Button></div>
         <div className="timetable-review-note"><ShieldCheck size={17}/><span>Check every session against your original document. Only sessions matching your authorized teaching assignments can be added.</span></div>
         <div className="timetable-rows">{draft.rows.map((row, index) => <article className="timetable-row" key={index} aria-label={`Session ${index + 1}`}>

@@ -26,7 +26,7 @@ async function request(route,{body,method='GET',cookie}={}) {
 async function go(page,name,endpoint) {
   if(await page.getByRole('button',{name:'Open navigation'}).isVisible())await page.getByRole('button',{name:'Open navigation'}).click();
   await clickNavigation(page,name);
-  if(name==='Overview')await page.getByText('Database connected',{exact:false}).first().waitFor();
+  if(name==='Overview')await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();
   else await page.getByRole('heading',{name,exact:true}).waitFor();
 }
 async function signIn(key) {
@@ -37,7 +37,7 @@ async function signIn(key) {
   await page.goto(base);await page.getByLabel('Institutional email').fill(`${key}@workflow-ui.test`);
   await page.getByLabel('Password',{exact:true}).fill(password);
   await page.getByRole('button',{name:'Sign in to FactX'}).click();
-  await page.getByText('Database connected',{exact:false}).first().waitFor();return page;
+  await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();return page;
 }
 async function applyLeave(page,reason,date=sessionDate) {
   await page.getByRole('button',{name:'Apply for leave',exact:true}).click();

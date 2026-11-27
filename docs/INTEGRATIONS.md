@@ -18,7 +18,7 @@ OLLAMA_VISION_MODEL=your-installed-vision-model
 # OLLAMA_API_KEY=your-service-secret-if-required
 ```
 
-The model names above are placeholders, not installed models. The app uses `/api/embed` and `/api/chat`; the readiness checker uses `/api/tags` to verify model availability. Embeddings are stored in SQLite alongside document passages. Changing the embedding model requires re-indexing documents. The normal assistant uses authorized RAG and requires the chat and embedding settings; timetable image/scanned-PDF extraction additionally requires the vision setting.
+The app uses `/api/embed` and `/api/chat`. The readiness checker uses `/api/tags` to verify model availability. Embeddings are stored in SQLite alongside document passages. Changing the embedding model requires re-indexing documents. The assistant can answer from authorized academic records with just the chat model. Document-based answers also require the embedding model and indexed documents. Timetable image and scanned PDF extraction requires a vision model.
 
 After `npm run doctor` reports the models available:
 
@@ -34,7 +34,7 @@ Scanned PDFs require the timetable vision workflow; the knowledge-library indexe
 
 Faculty, HOD, and Admin can open the assistant and choose **Upload timetable**. The LangGraph workflow extracts sessions from a PDF, PNG, or JPEG, matches names only to the caller's authorized teaching assignments, checks existing and draft conflicts, and saves a private draft. The caller can correct unresolved fields in the review table. Nothing is written to `timetable` until the caller presses **Confirm and add sessions**; retries are idempotent and notifications go to the affected faculty.
 
-The workflow accepts files up to 10 MB and eight PDF pages, bounds decoded image pixels, rejects mismatched file content, ignores document instructions, and never lets model output call tools. A Faculty account can add only its own assigned sessions; HOD is limited to its department. Text PDFs use `OLLAMA_CHAT_MODEL`; images and scanned pages use `OLLAMA_VISION_MODEL`. If either service is unavailable, no timetable records are changed.
+The workflow accepts files up to 10 MB and eight PDF pages, bounds decoded image pixels, rejects mismatched file content, ignores document instructions, and never lets model output call tools. A Faculty account can add only its own assigned sessions; HOD is limited to its department. Text PDFs use `OLLAMA_CHAT_MODEL`. For images and scanned PDFs, FactX can read clear printed English with local OCR and structure it with the chat model. It uses `OLLAMA_VISION_MODEL` for images the local OCR cannot transcribe reliably. Allow up to five minutes for extraction, particularly on CPU-only hosts. If extraction reaches the time or output limit, upload fewer pages or request a narrower range of sessions.
 
 ## Programming execution
 

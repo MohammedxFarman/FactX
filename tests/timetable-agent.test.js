@@ -48,7 +48,7 @@ test('timetable assistant creates reviewed drafts and commits idempotently', asy
     assert.equal(status.data.visionConfigured, true);
     const form = new FormData();
     form.append('instruction', 'Read the uploaded timetable and prepare a draft.');
-    form.append('file', new Blob([png], { type: 'image/png' }), 'timetable.png');
+    form.append('file', new Blob([png], { type: 'application/octet-stream' }), 'timetable.png');
     const draftResponse = await request('/assistant/timetable/drafts', { method: 'POST', body: form, cookie: facultyCookie });
     assert.equal(draftResponse.status, 201, JSON.stringify(draftResponse.data));
     assert.equal(draftResponse.data.canCommit, true);

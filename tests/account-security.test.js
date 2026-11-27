@@ -40,6 +40,44 @@ test('password recovery rejects expired links, revokes credentials and does not 
  }finally{await f.close();}
 });
 
+test('password reset codes expire, lock after five failed attempts and can be used once',async()=>{
+ const mail=[],f=await fixture({sendMail:async message=>mail.push(message)});
+ const email='student@redesign.invalid',password='Synthetic-recovery-code-284';
+ const requestCode=async address=>{
+  const {data}=await f.request('/auth/forgot-password',{email:address,method:'otp'});
+  assert.match(data.challenge,/^[a-f0-9]{64}$/);
+  return data;
+ };
+ const latestCode=()=>mail.at(-1).text.match(/\b\d{6}\b/)[0];
+ const reset=async(challenge,code)=>(await fetch(f.base+'/api/auth/reset-password-code',{
+  method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge,code,password})
+ })).status;
+ try{
+  const expired=await requestCode(email),expiredCode=latestCode();
+  const unknown=await requestCode('unknown@redesign.invalid');
+  assert.deepEqual(Object.keys(expired),Object.keys(unknown));
+  assert.equal(expired.message,unknown.message);
+  assert.notEqual(expired.challenge,unknown.challenge);
+  assert.equal(mail.length,1);
+  assert.equal(await reset(unknown.challenge,expiredCode),400);
+  f.db.prepare('UPDATE account_reset_codes SET expires_at=? WHERE challenge=?').run(Date.now()-1,expired.challenge);
+  assert.equal(await reset(expired.challenge,expiredCode),400);
+
+  const {challenge:locked}=await requestCode(email),lockedCode=latestCode();
+  const wrongCode=lockedCode==='000000'?'000001':'000000';
+  for(let attempt=0;attempt<5;attempt++)assert.equal(await reset(locked,wrongCode),400);
+  assert.equal(await reset(locked,lockedCode),400);
+
+  const {challenge:replaced}=await requestCode(email),replacedCode=latestCode();
+  const {challenge}=await requestCode(email),code=latestCode();
+  assert.equal(await reset(replaced,replacedCode),400);
+  assert.equal(await reset(challenge,code),200);
+  assert.equal(await reset(challenge,code),400);
+  const {data}=await f.request('/auth/login',{email,password});
+  assert.equal(data.id,f.student.id);
+ }finally{await f.close();}
+});
+
 test('mandatory verification permits account recovery and logout but blocks academic records',async()=>{
  const mail=[],f=await fixture({sendMail:async message=>mail.push(message)});
  const previous=process.env.REQUIRE_EMAIL_VERIFICATION;

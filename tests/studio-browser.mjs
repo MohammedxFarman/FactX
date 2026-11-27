@@ -4,7 +4,7 @@ import {mkdirSync} from 'node:fs';
 import {fixture,chromiumPath} from './ui-fixture.mjs';
 const f=await fixture(),browser=await chromium.launch({headless:true,executablePath:chromiumPath()});
 const errors=[];mkdirSync('test-results',{recursive:true});
-async function login(email){const context=await browser.newContext({viewport:{width:1366,height:900}});const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(f.base);await p.getByLabel('Institutional email').fill(email);await p.getByLabel('Password',{exact:true}).fill(f.password);await p.getByRole('button',{name:'Sign in to FactX'}).click();await p.getByText('Database connected',{exact:false}).waitFor();return p;}
+async function login(email){const context=await browser.newContext({viewport:{width:1366,height:900}});const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(f.base);await p.getByLabel('Institutional email').fill(email);await p.getByLabel('Password',{exact:true}).fill(f.password);await p.getByRole('button',{name:'Sign in to FactX'}).click();await p.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();return p;}
 try{
  const teacher=await login('faculty@redesign.invalid');await teacher.getByRole('button',{name:'Open assistant',exact:true}).click();await teacher.getByRole('button',{name:'Create assessment or module',exact:true}).click();
  const studio=teacher.getByRole('dialog',{name:'Assessment Studio'});await studio.waitFor();await studio.getByRole('button',{name:'2. Edit draft',exact:true}).click();await studio.getByLabel('Title',{exact:true}).fill('Postman evidence assessment');

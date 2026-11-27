@@ -44,6 +44,6 @@ npm run backup -- verify PATH_TO_BACKUP
 npm run backup -- restore PATH_TO_BACKUP NEW_PRIVATE_DIRECTORY
 ```
 
-Set `SMTP_HOST`, `MAIL_FROM` and the actual application origin in `PUBLIC_URL` before testing recovery emails. Configure matching SMTP credentials if the relay requires them. Verify delivery, single-use reset links and email confirmation before setting `REQUIRE_EMAIL_VERIFICATION=true`. Production requires an HTTPS public origin. Local tests capture mail and do not prove actual SMTP delivery.
+Set `SMTP_HOST`, `MAIL_FROM` and the actual application origin in `PUBLIC_URL` before testing account emails. Configure matching SMTP credentials if the relay requires them. Verify delivery of password reset codes and email confirmation links before setting `REQUIRE_EMAIL_VERIFICATION=true`. Production requires an HTTPS public origin. Local tests capture mail in an isolated fixture.
 
 Local automated checks cover application behavior. TLS, host permissions, sandbox isolation, real model quality, operational recovery, and institutional policy need verification on the selected deployment.

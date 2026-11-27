@@ -29,7 +29,7 @@ try {
   await page.getByLabel('Setup token').fill('ui-test-setup-token');
   await page.getByRole('button', { name: 'Create your workspace' }).click();
   await page.getByRole('heading', { name: 'Overview', exact:true }).waitFor();
-  await page.getByText('Database connected', { exact: false }).first().waitFor();
+  await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();
   assert.equal(await page.locator('aside.sidebar').getByRole('button',{name:'Academics',exact:true}).isVisible(),true,'Administrator must see Academics without expanding a group');
   await page.getByRole('button',{name:'Add department',exact:true}).waitFor();
   await page.setViewportSize({width:390,height:844});
@@ -59,7 +59,7 @@ try {
   await workspaceMenu.getByRole('menuitem').waitFor();
   await page.keyboard.press('Enter');
   await workspaceMenu.waitFor({ state:'hidden' });
-  await page.getByText('Database connected', { exact:false }).first().waitFor();
+  await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();
   await clickNavigation(page,'Academics');
   await page.getByRole('heading', { name:'Academics', exact:true }).waitFor();
   await workspaceTrigger.click();
@@ -102,7 +102,7 @@ try {
     await clickNavigation(page,name === 'Labs' ? /^Labs/ : name);
     assert.equal(await breadcrumb.locator('[aria-current="page"]').textContent(), name);
     await breadcrumb.getByRole('button', { name: 'Workspace', exact: true }).click();
-    await page.getByText('Database connected', { exact: false }).first().waitFor();
+    await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();
     assert.equal(await breadcrumb.locator('[aria-current="page"]').textContent(), 'Workspace');
     assert.equal(await breadcrumb.getByRole('button').count(), 0, 'Dashboard breadcrumb must be inactive');
   }
@@ -121,7 +121,7 @@ try {
   await page.getByRole('heading', { name: 'Browser verification notice', exact: true }).waitFor();
   await page.screenshot({ path: 'test-results/announcements-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
-  await page.getByText('Database connected', { exact: false }).first().waitFor();
+  await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name:'Open navigation' }).click();
   await workspaceTrigger.click();
@@ -188,7 +188,7 @@ try {
       assert.equal(await menu.getByRole('menuitem').count(),1);
       await menu.getByRole('menuitem',{name:new RegExp(`${portal} portal`)}).click();
       await menu.waitFor({state:'hidden'});
-      await portalPage.getByText('Database connected',{exact:false}).first().waitFor();
+      await portalPage.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();
       assert.equal(await portalPage.getByRole('button',{name:'Settings',exact:true}).count(),0);
       if(role==='HOD') {
         await portalPage.getByRole('heading',{name:'Department priorities'}).waitFor();

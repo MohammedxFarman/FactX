@@ -7,7 +7,7 @@ const browser=await chromium.launch({headless:true,executablePath:chromiumPath()
 const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 page.setDefaultTimeout(20000);
-const login=async(email)=>{await page.goto(test.base);await page.getByLabel('Institutional email').fill(email);await page.getByLabel('Password',{exact:true}).fill(test.password);await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();await page.getByText('Database connected',{exact:false}).waitFor();await page.evaluate(()=>{location.hash='grades';});await page.getByRole('heading',{name:'Marks & results',exact:true}).waitFor();};
+const login=async(email)=>{await page.goto(test.base);await page.getByLabel('Institutional email').fill(email);await page.getByLabel('Password',{exact:true}).fill(test.password);await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();await page.evaluate(()=>{location.hash='grades';});await page.getByRole('heading',{name:'Marks & results',exact:true}).waitFor();};
 try{
   await login('faculty@redesign.invalid');
   await page.getByRole('button',{name:'Enter mid-term / internal marks'}).click();

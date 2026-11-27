@@ -19,11 +19,11 @@ try{
  const oldCookies=await context.cookies();
  await page.goto(f.base+'/#forgot-password');
  await page.getByLabel('Institutional email').fill('student@redesign.invalid');
- await page.getByRole('button',{name:'Send reset link'}).click();
+ await page.getByRole('button',{name:'Send reset code'}).click();
  await page.getByText('If an active account matches that address',{exact:false}).waitFor();
  assert.equal(mail.length,1);
- const resetLink=link(),password='Synthetic-browser-reset-975';
- await page.goto(resetLink);
+ const code=mail[0].text.match(/\b\d{6}\b/)[0],password='Synthetic-browser-reset-975';
+ await page.getByLabel('Reset code').fill(code);
  await page.getByLabel('New password',{exact:true}).fill(password);
  await page.getByLabel('Confirm new password').fill('Synthetic-mismatch-975');
  await page.getByRole('button',{name:'Update password'}).click();
@@ -33,11 +33,8 @@ try{
  await page.getByText('Password updated. Sign in with your new password.',{exact:true}).waitFor();
  const cookie=oldCookies.map(c=>c.name+'='+c.value).join('; ');
  assert.equal((await fetch(f.base+'/api/auth/me',{headers:{Cookie:cookie}})).status,401);
- await page.goto(resetLink);
- await page.getByLabel('New password',{exact:true}).fill(password);
- await page.getByLabel('Confirm new password').fill(password);
- await page.getByRole('button',{name:'Update password'}).click();
- await page.getByRole('alert').filter({hasText:'invalid or expired'}).waitFor();
+ await page.getByRole('link',{name:'Back to sign in'}).click();
+ await page.getByRole('button',{name:'Sign in to FactX',exact:true}).waitFor();
  process.env.REQUIRE_EMAIL_VERIFICATION='true';
  await login(password);
  await page.getByRole('heading',{name:'Verify your email to continue'}).waitFor();
@@ -60,5 +57,5 @@ try{
  await page.getByRole('button',{name:'My profile',exact:true}).waitFor();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  assert.deepEqual(errors,[]);
- console.log('PASS: mobile email recovery, mismatch validation, single-use links, session revocation, verification gate, email confirmation, password change and fresh login. Mail captured in an isolated fixture.');
+ console.log('PASS: mobile email recovery codes, mismatch validation, session revocation, verification gate, email confirmation, password change and fresh login. Mail captured in an isolated fixture.');
 }finally{delete process.env.REQUIRE_EMAIL_VERIFICATION;await browser.close();await f.close();}

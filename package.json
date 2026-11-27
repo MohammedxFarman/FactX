@@ -28,6 +28,7 @@
     "@langchain/core": "^1.2.14",
     "@langchain/langgraph": "^1.4.18",
     "@napi-rs/canvas": "^1.0.9",
+    "@tesseract.js-data/eng": "^1.0.0",
     "chart.js": "^4.5.1",
     "express": "^5.3.0",
     "lucide-react": "^0.468.0",
@@ -39,6 +40,7 @@
     "pdfkit": "^0.17.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "tesseract.js": "^7.0.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

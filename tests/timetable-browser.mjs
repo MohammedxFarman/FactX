@@ -10,9 +10,12 @@ const directory = mkdtempSync(path.join(tmpdir(), 'factx-timetable-ui-'));
 const environment = Object.fromEntries(['OLLAMA_URL', 'OLLAMA_CHAT_MODEL', 'OLLAMA_VISION_MODEL'].map(key => [key, process.env[key]]));
 const extracted = { class: 'Review Class', subject: 'Review Subject', faculty: 'Review Faculty', day_of_week: 1, start_time: '09:00', end_time: '10:00', room: 'Room A', source_text: 'Monday 09:00-10:00' };
 const ai = createServer(async (request, response) => {
-  for await (const chunk of request) { /* consume upload */ }
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  const body = JSON.parse(Buffer.concat(chunks));
+  const content = body.model === 'test-chat' ? 'You can access one class [W1].' : JSON.stringify({ rows: [extracted, extracted] });
   response.writeHead(200, { 'Content-Type': 'application/json' });
-  response.end(JSON.stringify({ message: { content: JSON.stringify({ rows: [extracted, extracted] }) } }));
+  response.end(JSON.stringify({ message: { content } }));
 });
 await new Promise(resolve => ai.listen(0, '127.0.0.1', resolve));
 Object.assign(process.env, { OLLAMA_URL: `http://127.0.0.1:${ai.address().port}`, OLLAMA_CHAT_MODEL: 'test-chat', OLLAMA_VISION_MODEL: 'test-vision' });
@@ -46,10 +49,13 @@ try {
   await page.getByLabel('Institutional email').fill('faculty@timetable-ui.invalid');
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in to FactX' }).click();
-  await page.getByText('Database connected', { exact: false }).first().waitFor();
+  await page.getByRole('heading', { name: 'Quick Access', exact: true }).waitFor();
   await page.locator('aside.sidebar').getByRole('button', { name: 'Timetable', exact: true }).click();
   await page.getByRole('heading', { name: 'Timetable', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Open assistant', exact: true }).click();
+  await page.getByRole('button', { name: 'What academic records can I access?' }).click();
+  await page.getByText('You can access one class [W1].', { exact: true }).waitFor();
+  await page.getByText('W1 Authorized workspace access', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Upload timetable', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Timetable assistant' });
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
