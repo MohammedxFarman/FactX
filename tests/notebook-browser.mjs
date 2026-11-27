@@ -8,6 +8,9 @@ const browser=await chromium.launch({headless:true,executablePath:chromiumPath()
 try {
   const activity=(await f.request('/activities',{title:'ML Lab',kind:'lab',class_id:f.classroom.id,subject_id:f.subject.id,
     max_marks:10,config:{language:'python',testCases:[{input:'',output:'1'}]}},f.admin)).data;
+  const starterUrl='https://colab.research.google.com/drive/synthetic-test-notebook';
+  await f.request('/activities',{title:'ML Lab with starter',kind:'lab',class_id:f.classroom.id,subject_id:f.subject.id,
+    config:{language:'python',resourceUrl:starterUrl,testCases:[{input:'',output:'1'}]}},f.admin);
   const page=await browser.newPage();
   await page.goto(f.base+'/#access');
   await page.getByLabel('Institutional email').fill('student@redesign.invalid');
@@ -15,14 +18,18 @@ try {
   await page.getByRole('button',{name:'Sign in to FactX'}).click();
   await page.getByRole('heading',{name:'Quick Access'}).waitFor();
   await page.evaluate(()=>{location.hash='labs';});
+  await page.getByRole('button',{name:'Open ML Lab with starter',exact:true}).click();
+  assert.equal(await page.getByRole('link',{name:'Open in Colab'}).getAttribute('href'),starterUrl);
+  await page.getByRole('button',{name:'Close lab workspace'}).click();
   await page.getByRole('button',{name:'Open ML Lab',exact:true}).click();
-  assert.equal(await page.getByRole('link',{name:'Open Jupyter'}).getAttribute('href'),'https://jupyter.org/try-jupyter/lab/index.html');
+  assert.equal(await page.getByRole('link',{name:'Open in Colab'}).getAttribute('href'),'https://colab.research.google.com/');
   const download=page.waitForEvent('download');
   await page.getByRole('button',{name:'Download starter notebook'}).click();
   const reader=await (await download).createReadStream();
   const chunks=[];for await(const chunk of reader)chunks.push(chunk);
   const notebook=JSON.parse(Buffer.concat(chunks));
   notebook.cells[1].source='print(1)';
+  notebook.cells[1].outputs=[{output_type:'stream',name:'stdout',text:'x'.repeat(1200000)}];
   await page.getByRole('button',{name:'Begin notebook assessment'}).click();
   await page.getByLabel('Completed notebook').setInputFiles({name:'solution.ipynb',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(notebook))});
   await page.getByRole('button',{name:'Submit notebook'}).click();

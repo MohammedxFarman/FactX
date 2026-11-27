@@ -1,10 +1,16 @@
+export const notebookByteLimit = 10 * 1024 * 1024;
+
+export function isMlSubject(activity) {
+  return [activity.subject_name, activity.title].some(name =>
+    /\b(?:machine[\s-]*learning|ml(?:[\s-]*lab(?:oratory)?)?|data science|deep learning)\b/i.test(name || '')
+  );
+}
+
 export function isNotebookLab(activity, config) {
   if (config.secureMode || (config.language && config.language !== 'python')) return false;
   if (config.workspace === 'notebook') return true;
   if (config.workspace === 'code') return false;
-  return [activity.subject_name, activity.title].some(name =>
-    /\b(?:machine[\s-]*learning|ml(?:[\s-]*lab(?:oratory)?)?|data science|deep learning)\b/i.test(name || '')
-  );
+  return isMlSubject(activity);
 }
 
 export function isNotebook(content) {
