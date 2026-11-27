@@ -1,0 +1,32 @@
+﻿.admin-overview-heading { margin-bottom:24px; }
+.admin-overview-heading .eyebrow,.admin-overview-heading p { display:none; }
+.admin-overview-heading h1 { font-size:28px; margin:0; }
+.overview-priorities { align-items:stretch; margin-bottom:28px; }
+.overview-priorities .fx-schedule-row { min-width:0; }
+.overview-priorities .fx-schedule-row>span { min-width:0; overflow-wrap:anywhere; }
+.overview-empty { color:var(--muted); padding:12px 0; line-height:1.6; }
+.overview-access { margin-bottom:28px; }
+.overview-access h2 { font-size:19px; margin:0 0 14px; }
+.overview-tiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.overview-tile { display:flex; align-items:center; gap:14px; min-width:0; min-height:96px; padding:22px; border:1px solid transparent; border-radius:18px; color:var(--tile-ink); background:var(--tile-bg); text-decoration:none; font-weight:650; line-height:1.45; }
+.overview-tile>span { flex:1; min-width:0; overflow-wrap:anywhere; }
+.overview-tile>svg { flex-shrink:0; }
+.overview-count { display:block; font-size:12px; font-weight:500; margin-top:4px; }
+.overview-tile.overview-tone-peach { --tile-bg:#fbe4d6; --tile-ink:#713e26; }
+.overview-tile.overview-tone-sky { --tile-bg:#dff0fa; --tile-ink:#255571; }
+.overview-tile.overview-tone-sage { --tile-bg:#e3eddd; --tile-ink:#365339; }
+.overview-tile.overview-tone-lavender { --tile-bg:#eee5f7; --tile-ink:#60447a; }
+.overview-tile.overview-tone-amber { --tile-bg:#fbefcc; --tile-ink:#745219; }
+.overview-tile.overview-tone-teal { --tile-bg:#dcefeb; --tile-ink:#285e56; }
+.overview-tile:hover { border-color:currentColor; box-shadow:0 4px 12px #183c2d12; }
+.overview-tile:focus-visible { outline:3px solid var(--ink); outline-offset:4px; }
+:root[data-theme=dark] .overview-tile.overview-tone-peach { --tile-bg:#493126; --tile-ink:#ffdbc5; }
+:root[data-theme=dark] .overview-tile.overview-tone-sky { --tile-bg:#243e50; --tile-ink:#cceaff; }
+:root[data-theme=dark] .overview-tile.overview-tone-sage { --tile-bg:#304332; --tile-ink:#d5edca; }
+:root[data-theme=dark] .overview-tile.overview-tone-lavender { --tile-bg:#3e314e; --tile-ink:#ebd7ff; }
+:root[data-theme=dark] .overview-tile.overview-tone-amber { --tile-bg:#493d23; --tile-ink:#ffe8ae; }
+:root[data-theme=dark] .overview-tile.overview-tone-teal { --tile-bg:#24423d; --tile-ink:#c3eee5; }
+@media(max-width:900px) { .overview-tiles { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .overview-tile { padding:16px 12px; gap:8px; font-size:13px; } }
+@media(max-width:360px) { .overview-tiles { grid-template-columns:1fr; } }
+
+:root[data-theme=dark] .overview-tile { background:var(--tile-bg); color:var(--tile-ink); }

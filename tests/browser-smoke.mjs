@@ -28,7 +28,7 @@ try {
   await page.getByLabel('Password', { exact: true }).fill('Browser-test-password-382');
   await page.getByLabel('Setup token').fill('ui-test-setup-token');
   await page.getByRole('button', { name: 'Create your workspace' }).click();
-  await page.getByRole('heading', { name: /Good .*Workspace/ }).waitFor();
+  await page.getByRole('heading', { name: 'Overview', exact:true }).waitFor();
   await page.getByText('Database connected', { exact: false }).first().waitFor();
   assert.equal(await page.locator('aside.sidebar').getByRole('button',{name:'Academics',exact:true}).isVisible(),true,'Administrator must see Academics without expanding a group');
   await page.getByRole('button',{name:'Add department',exact:true}).waitFor();
@@ -52,7 +52,7 @@ try {
   assert.equal(await workspaceTrigger.evaluate(element => element === document.activeElement), true);
   await workspaceTrigger.locator('.workspace-chevron').click();
   await workspaceMenu.waitFor();
-  await page.getByRole('heading', { name: /Good .*Workspace/ }).click();
+  await page.getByRole('heading', { name: 'Overview', exact:true }).click();
   await workspaceMenu.waitFor({ state:'hidden' });
   await workspaceTrigger.focus();
   await page.keyboard.press('ArrowDown');
@@ -64,7 +64,7 @@ try {
   await page.getByRole('heading', { name:'Academics', exact:true }).waitFor();
   await workspaceTrigger.click();
   await workspaceMenu.getByRole('menuitem', { name:/Administrator portal/ }).click();
-  await page.getByRole('heading', { name:/Good .*Workspace/ }).waitFor();
+  await page.getByRole('heading', { name:'Overview', exact:true }).waitFor();
   await clickNavigation(page,'Academics');
   await clickNavigation(page,'Academic setup');
   await page.getByRole('button',{name:'Manage departments and classes',exact:true}).click();
@@ -141,7 +141,7 @@ try {
   await page.screenshot({ path: 'test-results/students-mobile.png', fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   await page.getByRole('navigation',{name:'Primary navigation'}).getByRole('button',{name:'Home',exact:true}).click();
-  await page.getByRole('heading', { name: /Good .*Workspace/ }).waitFor();
+  await page.getByRole('heading', { name: 'Overview', exact:true }).waitFor();
   for (const name of ['Timetable', 'Announcements', 'Knowledge library', 'Settings']) {
     await page.getByRole('button', { name: 'Open navigation' }).click();
     await clickNavigation(page,name);
