@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY index.html vite.config.js ./
 COPY src ./src
+COPY server/lab-environment.js ./server/lab-environment.js
 COPY public ./public
 COPY scripts/build-app-icons.mjs ./scripts/build-app-icons.mjs
 RUN npm run build
