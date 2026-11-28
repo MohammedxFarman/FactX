@@ -2,11 +2,11 @@ import {chromium,expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {fixture,chromiumPath} from './ui-fixture.mjs';
-const test=await fixture();const browser=await chromium.launch({headless:true,executablePath:chromiumPath()});const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(20000);const errors=[];
+const test=await fixture();const browser=await chromium.launch({headless:true,executablePath:chromiumPath()});const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(20000);const errors=[];const scripts=[];page.on('request',request=>{if(request.resourceType()==='script')scripts.push(request.url());});
 page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(['error','warning'].includes(m.type()))errors.push(m.text());});mkdirSync('test-results',{recursive:true});
 try{
- await page.goto(test.base);await page.getByRole('heading',{name:/Less searching/}).waitFor();await page.screenshot({path:'test-results/redesign-landing-desktop.png',fullPage:true});
- await page.getByLabel('Institutional email').fill('student@redesign.invalid');await page.getByLabel('Password',{exact:true}).fill(test.password);await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();await page.getByText('Database connected',{exact:false}).waitFor();
+ await page.goto(test.base);await page.getByRole('heading',{name:/Less searching/}).waitFor();assert.equal(scripts.some(url=>/\/Workspace-[^/]+\.js/.test(url)),false,'Public landing must not load the authenticated workspace');await page.screenshot({path:'test-results/redesign-landing-desktop.png',fullPage:true});
+ await page.getByLabel('Institutional email').fill('student@redesign.invalid');await page.getByLabel('Password',{exact:true}).fill(test.password);await page.getByRole('button',{name:'Sign in to FactX',exact:true}).click();await page.locator('#workspace-sidebar').waitFor();assert.ok(scripts.some(url=>/\/Workspace-[^/]+\.js/.test(url)),'Sign-in must load the workspace');await page.reload();await page.locator('#workspace-sidebar').waitFor();
  await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
  await page.waitForFunction(()=>window.scrollY===0);
  await page.screenshot({path:'test-results/redesign-home-desktop.png',fullPage:true});
@@ -39,7 +39,7 @@ try{
   await staff.getByLabel('Institutional email').fill('faculty@redesign.invalid');
   await staff.getByLabel('Password',{exact:true}).fill(test.password);
   await staff.getByRole('button',{name:'Sign in to FactX',exact:true}).click();
-  await staff.getByText('Database connected',{exact:false}).waitFor();
+  await staff.locator('#workspace-sidebar').waitFor();
   await staff.evaluate(()=>{location.hash='attendance';});
   const correction=staff.getByRole('combobox',{name:'Attendance for Alex Student'});
   await correction.selectOption('absent');

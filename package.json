@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -k \"node --watch server/index.js\" \"vite --host 127.0.0.1\"",
     "predev": "node scripts/build-app-icons.mjs",
-    "build": "node scripts/build-app-icons.mjs && vite build",
+    "build": "node scripts/build-app-icons.mjs && node scripts/build-frontend.mjs",
     "start": "node server/index.js",
     "test": "node --import ./tests/isolated-env.mjs --test tests/*.test.js",
     "test:browser": "node --import ./tests/isolated-env.mjs tests/browser-smoke.mjs && node --import ./tests/isolated-env.mjs tests/workflow-browser.mjs && node --import ./tests/isolated-env.mjs tests/timetable-browser.mjs && node --import ./tests/isolated-env.mjs tests/studio-browser.mjs && node --import ./tests/isolated-env.mjs tests/results-browser.mjs && node --import ./tests/isolated-env.mjs tests/completion-browser.mjs && node --import ./tests/isolated-env.mjs tests/account-browser.mjs",
