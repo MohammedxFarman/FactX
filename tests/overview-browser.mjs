@@ -44,6 +44,21 @@ try {
  await expect(page.locator('.overview-count')).toHaveText('1 open');
  await page.getByRole('button',{name:'Review a request Browser fixture'}).click();
  await expect(page).toHaveURL(/#reports$/);
+ const {department_id}=test.db.prepare('SELECT department_id FROM classes WHERE id=?').get(test.classroom.id);
+ for(let i=1;i<=5;i++){
+   const {data:student}=await test.request('/users',{name:`Support fixture ${i}`,email:`support-${i}@redesign.invalid`,password:test.password,role:'STUDENT',department_id,class_id:test.classroom.id,roll_number:`SUPPORT-${i}`},test.admin);
+   test.db.prepare("INSERT INTO submissions(id,activity_id,student_id,status,score,attempt,created_at) VALUES(?,?,?,'evaluated',0,1,?)").run('support-score-'+i,test.lab.id,student.id,new Date().toISOString());
+ }
+ const faculty=await browser.newPage();
+ await faculty.goto(test.base);
+ await faculty.getByLabel('Institutional email').fill('faculty@redesign.invalid');
+ await faculty.getByLabel('Password',{exact:true}).fill(test.password);
+ await faculty.getByRole('button',{name:'Sign in to FactX',exact:true}).click();
+ await faculty.getByRole('heading',{name:'Students needing support'}).waitFor();
+ await faculty.getByRole('button',{name:'Show all 6 students'}).click();
+ await expect(faculty.getByRole('button',{name:/Support fixture 5.*Review assessment performance/})).toBeVisible();
+ await faculty.getByRole('button',{name:/Alex Student.*attendance routine/}).click();
+ await faculty.getByRole('dialog',{name:'The complete student story'}).waitFor();
  assert.deepEqual(errors,[]);
  console.log('PASS: six keyboard links at four viewport sizes, live inbox count and schedule, empty states, dark palette, no overflow or browser errors.');
 } finally {await browser.close();await test.close();}

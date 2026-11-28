@@ -21,6 +21,19 @@ export function studentAnalytics(db, studentId) {
   if (attendancePercent !== null && attendancePercent < attendanceThreshold) suggestions.push({ title: 'Build a consistent attendance routine', detail: `Your recorded attendance is ${attendancePercent}%. Review missed topics with your faculty and plan your next classes.`, source: `${considered.length} recorded sessions · Institutional support threshold: ${attendanceThreshold}%` });
   const bySubject = Object.groupBy(marks, m => m.subject_id);
   for (const rows of Object.values(bySubject)) { const avg = rows.reduce((n, r) => n + r.score / r.max_marks * 100, 0) / rows.length; if (avg < marksThreshold) suggestions.push({ title: `Revisit ${rows[0].subject_name}`, detail: `Your average across recorded marks is ${Math.round(avg)}%. Ask your faculty for targeted practice and feedback.`, source: `${rows.length} recorded evaluation(s) · Institutional support threshold: ${marksThreshold}%` }); }
+  const assessmentScores=db.prepare(`
+    SELECT subject.name, COUNT(*) AS count, AVG(100.0 * sub.score / a.max_marks) AS average
+    FROM submissions sub JOIN activities a ON a.id=sub.activity_id JOIN subjects subject ON subject.id=a.subject_id
+    WHERE sub.student_id=? AND sub.score IS NOT NULL AND a.max_marks>0
+      AND NOT EXISTS (SELECT 1 FROM submissions later WHERE later.activity_id=sub.activity_id
+        AND later.student_id=sub.student_id AND later.score IS NOT NULL AND later.attempt>sub.attempt)
+    GROUP BY subject.id HAVING AVG(100.0 * sub.score / a.max_marks) < ?
+  `).all(studentId,marksThreshold);
+  for(const row of assessmentScores)suggestions.push({
+    title:`Review assessment performance in ${row.name}`,
+    detail:`The average across ${row.count} graded assessment(s) is ${Math.round(row.average)}%.`,
+    source:`Latest graded attempt per assessment ? Institutional support threshold: ${marksThreshold}%`
+  });
   const student=db.prepare('SELECT * FROM users WHERE id=?').get(studentId),scope=scopes(db,student);
   const pending = db.prepare("SELECT a.* FROM activities a WHERE a.kind!='module' AND a.deadline IS NOT NULL AND a.deadline < ? AND NOT EXISTS(SELECT 1 FROM submissions s WHERE s.activity_id=a.id AND s.student_id=?)").all(new Date().toISOString(),studentId).filter(a=>scope.canActivity(a));
   if (pending.length) suggestions.push({ title: 'Discuss overdue work with your faculty', detail: `${pending.length} assessment(s) have passed their deadline without a submission. Contact the relevant faculty to agree on next steps.`, source: 'Assessment deadlines and submission records' });
