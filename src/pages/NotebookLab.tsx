@@ -1,43 +1,120 @@
-import {useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import type {Activity} from '../lib/types';
-import {isNotebook,isMlSubject,notebookByteLimit} from '../../server/lab-environment.js';
+import {isNotebook,notebookByteLimit} from '../../server/lab-environment.js';
 
-export function downloadNotebook(content:string) {
+type Text=string|string[];
+type Output={output_type:string;name?:string;text?:Text;traceback?:string[];data?:Record<string,Text>};
+type Cell={cell_type:string;metadata:object;source:Text;execution_count?:number|null;outputs?:Output[]};
+type Notebook={nbformat:number;nbformat_minor:number;metadata:object;cells:Cell[]};
+const join=(text?:Text)=>Array.isArray(text)?text.filter(line=>typeof line==='string').join(''):typeof text==='string'?text:'';
+const codeCell=(source=''):Cell=>({cell_type:'code',metadata:{},source,outputs:[],execution_count:null});
+function starter(a:Activity):Notebook{
+  return {nbformat:4,nbformat_minor:4,metadata:{kernelspec:{display_name:'Python 3',language:'python',name:'python3'}},
+    cells:[{cell_type:'markdown',metadata:{},source:[a.title,a.description,...(a.config.tasks||[]).map(t=>[t.title,t.instructions,t.criteria].join('\n'))].filter(Boolean).join('\n\n')},codeCell()]};
+}
+export function downloadNotebook(content:string){
   const href=URL.createObjectURL(new Blob([content],{type:'application/x-ipynb+json'}));
-  const link=document.createElement('a');
-  link.href=href;
-  link.download='lab.ipynb';
-  link.click();
+  const link=document.createElement('a');link.href=href;link.download='lab.ipynb';link.click();
   setTimeout(()=>URL.revokeObjectURL(href),1000);
 }
+function Outputs({outputs=[]}:{outputs?:Output[]}) {
+  return <>{(Array.isArray(outputs)?outputs:[]).filter(o=>o&&typeof o==='object').map((o,i)=>o.data?.['image/png']?<img key={i} alt="Notebook plot" src={'data:image/png;base64,'+join(o.data['image/png'])}/>:<pre key={i}>{join(o.text)||join(o.data?.['text/plain'])||(Array.isArray(o.traceback)?o.traceback.join('\n'):'')}</pre>)}</>;
+}
+export function NotebookPreview({content}:{content:string}){
+  const notebook:Notebook=JSON.parse(content);
+  return <div className="fx-notebook">{notebook.cells.map((cell,i)=><section key={i}><pre>{join(cell.source)}</pre><Outputs outputs={cell.outputs}/></section>)}</div>;
+}
 
-export function NotebookLab({activity,student,started,disabled,onStart,onSubmit}:{
-  activity:Activity;student:boolean;started:boolean;disabled:boolean;onStart:()=>void;onSubmit:(file:File)=>Promise<void>
-}) {
-  const [file,setFile]=useState<File|null>(null),[error,setError]=useState('');
-  const custom=activity.config.resourceUrl;
-  const fallback=isMlSubject(activity)?'https://colab.research.google.com/':'https://jupyter.org/try-jupyter/lab/index.html';
-  const url=custom && /^https?:\/\//i.test(custom)?custom:fallback;
-  const colab=new URL(url).hostname==='colab.research.google.com';
-  const starter=()=>downloadNotebook(JSON.stringify({nbformat:4,nbformat_minor:4,
-    metadata:{kernelspec:{display_name:'Python 3',language:'python',name:'python3'}},
-    cells:[{cell_type:'markdown',metadata:{},source:activity.title+'\n\n'+activity.description},
-      {cell_type:'code',metadata:{},source:'',outputs:[],execution_count:null}]},null,2));
-  async function submit(){
-    setError('');
-    if(!file)return;
+function openDrafts():Promise<IDBDatabase>{
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open('factx-notebooks',1);
+    req.onupgradeneeded=()=>req.result.createObjectStore('drafts');
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+  });
+}
+
+export function NotebookLab({activity,studentId,started,disabled,onStart,onSubmit}:{
+  activity:Activity;studentId:string;started:boolean;disabled:boolean;onStart:()=>void;onSubmit:(file:File)=>Promise<void>
+}){
+  const [book,setBook]=useState(()=>starter(activity)),[ready,setReady]=useState(false),[error,setError]=useState('');
+  const [running,setRunning]=useState<number|null>(null),[kernel,setKernel]=useState(false),[status,setStatus]=useState('');
+  const db=useRef<IDBDatabase|null>(null),port=useRef<MessagePort|null>(null),frame=useRef<HTMLIFrameElement>(null);
+  const pending=useRef<{index:number;source:string}|null>(null),count=useRef(0);
+  const draftKey=JSON.stringify([studentId,activity.id]);
+  useEffect(()=>{
+    let live=true;
+    openDrafts().then(database=>{
+      if(!live){database.close();return;}
+      db.current=database;
+      const req=database.transaction('drafts').objectStore('drafts').get(draftKey);
+      req.onsuccess=()=>{if(live){if(req.result)setBook(req.result);setReady(true);}};
+      req.onerror=()=>{if(live){setError('Could not restore this device’s notebook draft.');setReady(true);}};
+    }).catch(()=>{if(live){setError('Device storage is unavailable. Export your work before leaving.');setReady(true);}});
+    return ()=>{live=false;db.current?.close();db.current=null;port.current?.close();};
+  },[draftKey]);
+  function update(next:Notebook){
+    setBook(next);
+    if(!db.current)return;
     try{
-      if(file.size>notebookByteLimit)throw new Error('The notebook exceeds the 10 MiB upload limit.');
-      const content=await file.text();
-      if(!isNotebook(content))throw new Error('Choose a Jupyter notebook (.ipynb) with at least one cell.');
-      await onSubmit(file);
-    }catch(e){setError(e instanceof Error?e.message:'Could not read notebook.');}
+      const tx=db.current.transaction('drafts','readwrite');
+      tx.objectStore('drafts').put(next,draftKey);
+      tx.oncomplete=()=>setStatus('Saved on this device');
+      tx.onabort=()=>setError('Could not save this draft. Export your notebook before leaving.');
+    }catch{setError('Could not save this draft. Export your notebook before leaving.');}
   }
-  return <section className="fx-card"><h2>Jupyter notebook</h2>
-    <p>{custom?'Open the linked workspace and save a copy of your work.':'Download the starter notebook and upload it in the workspace.'} Submit your completed .ipynb file with its outputs (up to 10 MiB).</p>
-    <div className="inline-actions"><button className="button outline" onClick={starter}>Download starter notebook</button>
-    <a href={url} className="button" target="_blank" rel="noreferrer">{colab?'Open in Colab':'Open Jupyter'}</a></div>
-    {student && (started?<div className="inline-actions"><label>Completed notebook<input type="file" accept=".ipynb" disabled={disabled} onChange={e=>{setFile(e.target.files?.[0]||null);setError('');}}/></label>
-    <button className="button" disabled={disabled||!file} onClick={submit}>Submit notebook</button></div>:<button className="button outline" disabled={disabled} onClick={onStart}>Begin notebook assessment</button>)}
-    {error&&<p role="alert">{error}</p>}</section>;
+  function change(index:number,patch:Partial<Cell>){update({...book,cells:book.cells.map((c,i)=>i===index?{...c,...patch}:c)});}
+  const applyOutput=useRef(change);applyOutput.current=change;
+  function stop(){
+    port.current?.close();port.current=null;pending.current=null;setRunning(null);setKernel(false);count.current=0;
+  }
+  function connect(){
+    const channel=new MessageChannel();port.current=channel.port1;
+    channel.port1.onmessage=({data})=>{
+      if(data.error){setError(String(data.error));stop();return;}
+      const cell=pending.current;if(!cell)return;
+      if(data.ready){channel.port1.postMessage({source:cell.source});return;}
+      if(Array.isArray(data.outputs)){
+        applyOutput.current(cell.index,{outputs:data.outputs,execution_count:++count.current});
+        pending.current=null;setRunning(null);
+      }
+    };
+    frame.current?.contentWindow?.postMessage('connect','*',[channel.port2]);
+  }
+  function run(index:number){
+    if(pending.current)return;
+    setError('');setRunning(index);
+    pending.current={index,source:join(book.cells[index].source)};
+    if(port.current)port.current.postMessage({source:pending.current.source});else setKernel(true);
+  }
+  async function importFile(file:File){
+    try{
+      if(file.size>notebookByteLimit)throw new Error('Choose a file of 10 MiB or less.');
+      const content=await file.text();
+      let next:Notebook;
+      if(/\.py$/i.test(file.name))next={...starter(activity),cells:[codeCell(content)]};
+      else if(isNotebook(content))next=JSON.parse(content);
+      else throw new Error('Choose a Python script (.py) or Jupyter notebook (.ipynb).');
+      if(book.cells.some(c=>c.cell_type==='code'&&join(c.source).trim())&&!confirm('Replace the current notebook with this file?'))return;
+      stop();update(next);setError('');
+    }catch(e){setError(e instanceof Error?e.message:'Could not import file.');}
+  }
+  const locked=!ready||!started||disabled||running!==null;
+  return <section className="fx-card fx-notebook"><h2>Python notebook</h2><p>Run cells in order to reuse variables. Import a package in a cell, or use <code>%pip install numpy</code> for a supported package.</p>
+    {kernel&&<iframe hidden title="Isolated Python kernel" sandbox="allow-scripts" src="/notebook-runtime/frame" ref={frame} onLoad={connect}/>}
+    {error&&<p className="error" role="alert">{error}</p>}
+    {!started&&<button className="button" disabled={disabled||!ready} onClick={onStart}>Begin notebook assessment</button>}
+    {book.cells.map((cell,i)=><section className="fx-sample" key={i}><label>{cell.cell_type==='code'?'Python':'Text'} cell {i+1}
+      <textarea rows={cell.cell_type==='code'?5:3} spellCheck={false} value={join(cell.source)} disabled={locked} onChange={e=>change(i,{source:e.target.value})}/></label>
+      {cell.cell_type==='code'&&<><button className="button outline" disabled={locked||!join(cell.source).trim()} onClick={()=>run(i)}>{running===i?'Running…':'Run cell'}</button><Outputs outputs={cell.outputs}/></>}
+    </section>)}
+    <div className="inline-actions"><button className="button outline" disabled={locked} onClick={()=>update({...book,cells:[...book.cells,codeCell()]})}>Add code cell</button>
+    {kernel&&<button className="button outline" onClick={stop}>Restart kernel</button>}
+    <label>Import .ipynb or .py<input type="file" accept=".ipynb,.py" disabled={locked} onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void importFile(file);}}/></label>
+    <button className="button outline" onClick={()=>downloadNotebook(JSON.stringify(book))}>Export notebook</button>
+    {started&&<button className="button" disabled={locked||!book.cells.some(c=>c.cell_type==='code'&&join(c.source).trim())} onClick={()=>{
+      const file=new File([JSON.stringify(book)],'assessment.ipynb',{type:'application/json'});
+      if(file.size>notebookByteLimit){setError('The notebook exceeds the 10 MiB submission limit.');return;}
+      void onSubmit(file);
+    }}>Submit notebook</button>}</div>
+    <small role="status">{running!==null?'Running Python…':status}</small></section>;
 }
