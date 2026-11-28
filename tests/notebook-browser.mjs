@@ -6,7 +6,7 @@ const f=await fixture();
 delete process.env.JUDGE_URL;
 const browser=await chromium.launch({headless:true,executablePath:chromiumPath()});
 try {
-  const activity=(await f.request('/activities',{title:'ML Lab',kind:'lab',class_id:f.classroom.id,subject_id:f.subject.id,
+  const activity=(await f.request('/activities',{title:'ML Lab',description:'Calculate the result in Python.',kind:'lab',class_id:f.classroom.id,subject_id:f.subject.id,
     max_marks:10,config:{language:'python',testCases:[{input:'',output:'1'}]}},f.admin)).data;
   const assignment=(await f.request('/activities',{title:'ML task 1',kind:'assignment',class_id:f.classroom.id,subject_id:f.subject.id,config:{}},f.admin)).data;
   const page=await browser.newPage();
@@ -18,16 +18,28 @@ try {
   await page.evaluate(()=>{location.hash='labs';});
   await page.getByRole('button',{name:'Open ML Lab',exact:true}).click();
   await page.getByRole('button',{name:'Begin notebook assessment'}).click();
+  await page.getByRole('region',{name:'Task instructions'}).getByText('Calculate the result in Python.').waitFor();
+  assert.equal(await page.getByLabel('Text cell 1',{exact:true}).count(),0);
+  const first=page.getByLabel('Python cell 1',{exact:true});
+  await first.fill('1 / 0');
+  await first.press('Control+Enter');
+  await page.getByText('Failed',{exact:true}).waitFor();
+  await page.getByText(/ZeroDivisionError/).waitFor();
+  page.once('dialog',dialog=>dialog.accept());
+  await page.getByRole('button',{name:'Delete cell 1'}).click();
+  assert.equal(await first.count(),0);
+  await page.getByRole('button',{name:'Add code cell'}).click();
   if(process.env.TEST_NOTEBOOK_PACKAGES){
-    await page.getByLabel('Python cell 2').fill('%pip install numpy\nimport numpy as np\nprint(np.arange(3).sum())');
+    await page.getByLabel('Python cell 1',{exact:true}).fill('%pip install numpy\nimport numpy as np\nprint(np.arange(3).sum())');
     await page.getByRole('button',{name:'Run cell',exact:true}).click();
     await page.locator('.fx-notebook .fx-sample pre').first().waitFor({timeout:90000});
     assert.equal((await page.locator('.fx-notebook .fx-sample pre').last().innerText()).trim().split('\n').at(-1),'3');
   }
-  await page.getByLabel('Python cell 2').fill('x = 41');
+  await page.getByLabel('Python cell 1',{exact:true}).fill('x = 41');
   await page.getByRole('button',{name:'Run cell',exact:true}).click();
   await page.getByRole('button',{name:'Add code cell'}).click();
-  await page.getByLabel('Python cell 3').fill('print(x + 1)');
+  await page.getByText('Completed',{exact:true}).waitFor();
+  await page.getByLabel('Python cell 2',{exact:true}).fill('print(x + 1)');
   await page.getByRole('button',{name:'Run cell',exact:true}).last().click();
   await page.getByText('42',{exact:true}).waitFor();
   page.once('dialog',dialog=>dialog.accept());
@@ -37,7 +49,7 @@ try {
   await page.getByRole('button',{name:'Submit notebook'}).click();
   await page.getByText('View submitted notebook').click();
   const row=f.db.prepare('SELECT content,status FROM submissions WHERE activity_id=?').get(activity.id);
-  assert.equal(JSON.parse(row.content).cells[2].outputs[0].text,'42\n');
+  assert.equal(JSON.parse(row.content).cells[1].outputs[0].text,'42\n');
   assert.equal(row.status,'submitted');
   await page.getByRole('button',{name:'Close lab workspace'}).click();
   await page.evaluate(()=>{location.hash='assessments';});

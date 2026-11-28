@@ -53,7 +53,10 @@ _factx_plots()`);
       try{
         for(const image of plots.toJs())outputs.push({output_type:'display_data',metadata:{},data:{'image/png':image}});
       }finally{plots.destroy();}
-    }catch(error){stream('stderr',error.message);}
+    }catch(error){
+      const message=String(error.message||error).slice(0,100000);
+      outputs.push({output_type:'error',ename:error.type||error.name||'Error',evalue:message,traceback:message.split('\n')});
+    }
     postMessage({outputs});
   }catch(error){postMessage({error:error.message});}
 };
